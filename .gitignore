@@ -28,3 +28,7 @@ out/
 *.tfvars
 !*.tfvars.example
 crash.log
+
+# Terraform backend 설정 (계정 정보 포함)
+backend.hcl
+!backend.hcl.example

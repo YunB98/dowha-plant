@@ -1,0 +1,8 @@
+# 복사해서 infra/backend.hcl로 저장한 뒤 bucket 값을 채운다. (backend.hcl은 git에 올리지 않는다)
+#   cp backend.hcl.example backend.hcl
+# bucket 값: infra/bootstrap에서 `terraform output state_bucket_name`
+
+bucket       = "dowha-plant-tfstate-<AWS 계정 ID>"
+region       = "ap-northeast-2"
+encrypt      = true
+use_lockfile = true

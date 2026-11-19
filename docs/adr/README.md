@@ -15,3 +15,4 @@
 | [0008](0008-domain-kr.md) | .kr 도메인, 사장님 명의, Route 53 위임 | 대체됨 |
 | [0009](0009-domain-dowha-plant-shop.md) | dowha-plant.shop 도메인 사용 | 채택 |
 | [0010](0010-inquiry-data-model.md) | 문의 데이터 구조와 금액 스냅샷 | 채택 |
+| [0011](0011-terraform-state-and-ci-auth.md) | Terraform 상태 관리와 GitHub Actions 인증 | 채택 |
