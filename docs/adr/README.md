@@ -8,11 +8,15 @@
 | [0001](0001-cloud-provider-aws.md) | 클라우드로 AWS 사용 | 채택 |
 | [0002](0002-single-ec2-docker-compose.md) | EC2 한 대 + Docker Compose 구성 | 채택 |
 | [0003](0003-backend-fastapi.md) | 백엔드로 FastAPI 사용 | 채택 |
-| [0004](0004-client-side-product-fetch.md) | 상품 목록은 브라우저에서 API로 조회 | 채택 |
+| [0004](0004-client-side-product-fetch.md) | 상품 목록은 브라우저에서 API로 조회 | 대체됨 |
 | [0005](0005-environments.md) | dev / staging(필요할 때만) / prod 환경 | 채택 |
-| [0006](0006-mvp-scope.md) | MVP에서 결제·회원 기능 제외 | 채택 |
+| [0006](0006-mvp-scope.md) | MVP에서 결제·회원 기능 제외 | 일부 대체됨 |
 | [0007](0007-admin-split.md) | 관리 화면을 사장님용과 운영자용으로 분리 | 채택 |
 | [0008](0008-domain-kr.md) | .kr 도메인, 사장님 명의, Route 53 위임 | 대체됨 |
 | [0009](0009-domain-dowha-plant-shop.md) | dowha-plant.shop 도메인 사용 | 채택 |
-| [0010](0010-inquiry-data-model.md) | 문의 데이터 구조와 금액 스냅샷 | 채택 |
+| [0010](0010-inquiry-data-model.md) | 문의 데이터 구조와 금액 스냅샷 | 대체됨 |
 | [0011](0011-terraform-state-and-ci-auth.md) | Terraform 상태 관리와 GitHub Actions 인증 | 채택 |
+| [0012](0012-pivot-to-outreach-and-discovery.md) | 홈페이지 목표 전환: 새 손님 유입과 출강 확대 | 채택 |
+| [0013](0013-plant-guide-qr-indirection.md) | 식물 관리 QR은 짧은 코드로 간접 연결 | 채택 |
+| [0014](0014-analytics-umami.md) | 방문 분석은 Umami 직접 운영 | 채택 |
+| [0015](0015-static-content-pages-with-rebuild.md) | 콘텐츠 페이지는 빌드 시 HTML 생성, 공개 시 자동 재빌드 | 채택 |

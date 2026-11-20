@@ -3,14 +3,16 @@
 ## 구성도
 
 ```
-손님 / 사장님 ──▶ Route 53 + CloudFront ──┬──▶ S3 (Next.js 정적 사이트)
-                                         ├──▶ S3 (상품·클래스 사진)
-                                         └──▶ /api/* ──▶ EC2 t4g.small (Docker Compose)
-                                                          ├─ Nginx
-                                                          ├─ FastAPI
-                                                          ├─ PostgreSQL ──▶ S3 백업 (매일, 30일 보관)
-                                                          └─ Prometheus, Grafana ──▶ 텔레그램 알림
-운영자 ──▶ SSM Session Manager ──▶ EC2 (SQLAdmin, Grafana 포트 포워딩)
+손님 / 사장님 ──▶ Route 53 + CloudFront ──┬──▶ S3 (Next.js 정적 사이트, 소개서 PDF)
+                                         ├──▶ S3 (사진)
+                                         └──▶ /api/*, /q/*, /umami/* ──▶ EC2 t4g.small (Docker Compose)
+                                                                           ├─ Nginx
+                                                                           ├─ FastAPI
+                                                                           ├─ Umami (방문 분석)
+                                                                           ├─ PostgreSQL ──▶ S3 백업 (매일, 30일 보관)
+                                                                           └─ Prometheus, Grafana ──▶ 텔레그램 알림
+FastAPI ──(콘텐츠 공개)──▶ GitHub Actions ──▶ 정적 사이트 재빌드 ──▶ S3 + CloudFront 캐시 무효화
+운영자 ──▶ SSM Session Manager ──▶ EC2 (SQLAdmin, Grafana, Umami 관리 화면 포트 포워딩)
 외부 헬스체크 (Route 53 헬스체크 또는 UptimeRobot) ──▶ 텔레그램 알림
 ```
 
@@ -19,7 +21,10 @@
 | 요청 | 경로 |
 |---|---|
 | 페이지 | CloudFront → S3 웹사이트 버킷 |
-| 상품 목록·문의 접수 | 브라우저 → CloudFront `/api/*` → EC2 Nginx → FastAPI → PostgreSQL |
+| 문의 접수, 클래스·설정 조회 | 브라우저 → CloudFront `/api/*` → EC2 Nginx → FastAPI → PostgreSQL |
+| QR 스캔 | CloudFront `/q/*` (캐시 안 함) → FastAPI → 스캔 기록 → 302 → 가이드 페이지 |
+| 방문 분석 | 브라우저 → CloudFront `/umami/*` → Umami (스크립트, 수집 경로만 공개) |
+| 가이드·사례 공개 | 관리 화면 → FastAPI → GitHub `repository_dispatch` → 재빌드 → S3 배포 (약 3~5분) |
 | 사진 보기 | CloudFront → S3 사진 버킷 |
 | 사진 올리기 | FastAPI가 presigned URL 발급 → 브라우저가 S3에 직접 업로드 |
 | 운영자 접속 | SSM 세션, 포트 포워딩 (SSH 포트 없음) |
@@ -33,7 +38,9 @@
 | SSH 대신 SSM | 접속 키 관리 불필요, 관리 도구를 외부에 공개하지 않음 |
 | 사진은 S3 직접 업로드 | 큰 파일이 EC2를 거치지 않음 |
 | NAT Gateway, RDS, 로드밸런서 미사용 | 월 7만 원 이상 절감, 대신 백업·모니터링을 직접 운영 |
-| 상품 목록은 브라우저에서 API로 조회 | 사장님이 등록하면 즉시 반영. v2에서 저장 시 자동 재빌드 추가 예정 |
+| 가이드·사례·갤러리는 빌드 시 HTML로 생성, 공개하면 자동 재빌드 | 검색 노출이 목표라 HTML에 내용이 있어야 함 (ADR 0015) |
+| QR은 `/q/{code}` 간접 연결 | 인쇄된 QR이 깨지지 않고 스캔 수를 셀 수 있음 (ADR 0013) |
+| Umami 직접 운영 | 쿠키 없는 방문 분석, 데이터 직접 소유 (ADR 0014) |
 | 외부 헬스체크 | 같은 EC2의 모니터링은 서버가 멈추면 알림을 못 보냄 |
 
 ## 장애 대응 목표
@@ -66,6 +73,5 @@
 
 ## 이후 확장 (v2 이후)
 
-- 관리 화면에서 저장하면 GitHub Actions로 정적 사이트 자동 재빌드
 - 트래픽 증가 시: ECS Fargate + ALB + RDS (설계 문서로만 유지)
 - 네이버 클라우드에 같은 구성 배포 또는 백업 이중화
