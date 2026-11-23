@@ -25,4 +25,5 @@
 | [0018](0018-github-oidc-subject-format.md) | GitHub OIDC 신뢰 정책은 ID 포함 sub로 제한 | 채택 |
 | [0019](0019-external-health-check-uptimerobot.md) | 외부 헬스체크는 UptimeRobot | 채택 |
 | [0020](0020-prod-network-and-storage.md) | prod 네트워크와 저장소 구성 | 채택 |
-| [0021](0021-prod-compute-and-cdn.md) | prod 서버와 CDN 구성 | 채택 |
+| [0021](0021-prod-compute-and-cdn.md) | prod 서버와 CDN 구성 | 일부 대체됨 |
+| [0022](0022-downsize-to-t4g-micro.md) | 서버를 t4g.micro로 낮춰 월 20달러 이내 운영 | 채택 |

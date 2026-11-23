@@ -38,9 +38,16 @@ variable "backup_retention_days" {
   default = 30
 }
 
+# 트래픽이 적어 1GB로 시작한다 (월 약 7.6달러). 메모리가 부족하면 t4g.small로 올린다. (ADR 0022)
 variable "instance_type" {
   type    = string
-  default = "t4g.small"
+  default = "t4g.micro"
+}
+
+variable "swap_size_mb" {
+  description = "메모리 1GB를 보완하는 스왑 크기"
+  type        = number
+  default     = 2048
 }
 
 variable "server_az" {

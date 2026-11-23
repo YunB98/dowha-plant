@@ -170,6 +170,12 @@ resource "aws_instance" "this" {
   # 실수로 콘솔·CLI에서 종료하지 못하게 한다. 교체가 필요하면 이 값을 먼저 false로 바꾼다.
   disable_api_termination = var.termination_protection
 
+  # t4g 기본값은 unlimited라서 CPU를 오래 많이 쓰면 추가 요금이 붙는다.
+  # standard는 크레딧을 다 쓰면 기본 성능(10%)으로 느려질 뿐 요금이 늘지 않는다.
+  credit_specification {
+    cpu_credits = var.cpu_credits
+  }
+
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required" # IMDSv2 강제

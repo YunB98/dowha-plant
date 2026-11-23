@@ -42,6 +42,7 @@ module "compute" {
   vpc_id        = module.network.vpc_id
   subnet_id     = module.network.public_subnet_ids[var.server_az]
   instance_type = var.instance_type
+  swap_size_mb  = var.swap_size_mb
 
   site_bucket_arn   = module.storage.bucket_arns["site"]
   media_bucket_arn  = module.storage.bucket_arns["media"]

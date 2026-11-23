@@ -14,7 +14,18 @@ variable "subnet_id" {
 
 variable "instance_type" {
   type    = string
-  default = "t4g.small"
+  default = "t4g.micro"
+}
+
+variable "cpu_credits" {
+  description = "버스터블 인스턴스 CPU 크레딧 모드. standard는 추가 요금이 없다"
+  type        = string
+  default     = "standard"
+
+  validation {
+    condition     = contains(["standard", "unlimited"], var.cpu_credits)
+    error_message = "cpu_credits는 standard 또는 unlimited여야 합니다."
+  }
 }
 
 variable "ami_ssm_parameter" {
@@ -31,7 +42,7 @@ variable "root_volume_size" {
 
 variable "swap_size_mb" {
   type    = number
-  default = 1024
+  default = 2048
 }
 
 variable "docker_compose_version" {
