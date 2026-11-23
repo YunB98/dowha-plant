@@ -9,9 +9,11 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  github_oidc_host  = "token.actions.githubusercontent.com"
-  state_bucket_name = "${var.project}-tfstate-${data.aws_caller_identity.current.account_id}"
-  state_bucket_arn  = "arn:aws:s3:::${local.state_bucket_name}"
+  github_oidc_host = "token.actions.githubusercontent.com"
+  # sub 클레임 앞부분. 예: repo:YunB98@251148256/dowha-plant@1464295966
+  github_subject_prefix = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}"
+  state_bucket_name     = "${var.project}-tfstate-${data.aws_caller_identity.current.account_id}"
+  state_bucket_arn      = "arn:aws:s3:::${local.state_bucket_name}"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
@@ -43,8 +45,8 @@ data "aws_iam_policy_document" "plan_trust" {
       test     = "StringLike"
       variable = "${local.github_oidc_host}:sub"
       values = [
-        "repo:${var.github_repository}:pull_request",
-        "repo:${var.github_repository}:ref:refs/heads/main",
+        "${local.github_subject_prefix}:pull_request",
+        "${local.github_subject_prefix}:ref:refs/heads/main",
       ]
     }
   }
@@ -113,7 +115,7 @@ data "aws_iam_policy_document" "apply_trust" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_host}:sub"
-      values   = ["repo:${var.github_repository}:environment:${var.github_apply_environment}"]
+      values   = ["${local.github_subject_prefix}:environment:${var.github_apply_environment}"]
     }
   }
 }

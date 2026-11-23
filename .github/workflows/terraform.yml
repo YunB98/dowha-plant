@@ -33,9 +33,9 @@ jobs:
     name: fmt / validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
@@ -67,15 +67,15 @@ jobs:
       run:
         working-directory: infra/${{ matrix.stack }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
       - name: AWS 로그인 (plan 역할, OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
           role-session-name: gha-plan-${{ github.run_id }}
@@ -123,7 +123,7 @@ jobs:
       # main에서만 apply 단계로 plan 파일을 넘긴다.
       - name: plan 파일 업로드
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tfplan-${{ matrix.stack }}
           path: |
@@ -150,9 +150,9 @@ jobs:
       run:
         working-directory: infra/${{ matrix.stack }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: tfplan-${{ matrix.stack }}
           path: infra/${{ matrix.stack }}
@@ -161,7 +161,7 @@ jobs:
         id: changes
         run: echo "has_changes=$(cat has_changes)" >> "$GITHUB_OUTPUT"
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         if: steps.changes.outputs.has_changes == 'true'
         with:
           terraform_version: ${{ env.TF_VERSION }}
@@ -169,7 +169,7 @@ jobs:
 
       - name: AWS 로그인 (apply 역할, OIDC)
         if: steps.changes.outputs.has_changes == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
           role-session-name: gha-apply-${{ github.run_id }}
