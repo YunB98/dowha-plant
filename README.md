@@ -23,7 +23,7 @@
                                                                            ├─ FastAPI
                                                                            ├─ Umami
                                                                            ├─ PostgreSQL ──▶ S3 백업
-                                                                           └─ Prometheus, Grafana ──▶ 텔레그램 알림
+                                                                           └─ Prometheus, Alertmanager ──▶ 텔레그램 알림 (Grafana는 필요할 때만)
 운영자 ──▶ SSM Session Manager ──▶ EC2 (SQLAdmin, Grafana, Umami 포트 포워딩)
 ```
 
@@ -36,11 +36,11 @@
 | 프론트엔드 | Next.js (정적 빌드) |
 | 백엔드 | FastAPI, SQLAlchemy, Alembic |
 | DB | PostgreSQL |
-| 실행 환경 | Docker Compose on EC2 (t4g.small, ARM) |
+| 실행 환경 | Docker Compose on EC2 (t4g.micro, ARM, 월 약 14~15달러) |
 | 정적 파일·사진 | S3 + CloudFront |
 | 인프라 코드 | Terraform |
 | CI/CD | GitHub Actions (OIDC로 AWS 인증) |
-| 모니터링 | Prometheus, Grafana, 외부 헬스체크, 텔레그램 알림 |
+| 모니터링 | Prometheus, Alertmanager, Grafana(필요할 때만), UptimeRobot 외부 헬스체크, 텔레그램 알림 |
 | 방문 분석 | Umami (직접 운영), 구글 서치 콘솔, 네이버 서치어드바이저 |
 
 ## 폴더 구조

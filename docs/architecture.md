@@ -5,12 +5,13 @@
 ```
 손님 / 사장님 ──▶ Route 53 + CloudFront ──┬──▶ S3 (Next.js 정적 사이트, 소개서 PDF)
                                          ├──▶ S3 (사진)
-                                         └──▶ /api/*, /q/*, /umami/* ──▶ EC2 t4g.small (Docker Compose)
+                                         └──▶ /api/*, /q/*, /umami/* ──▶ EC2 t4g.micro (Docker Compose, ADR 0022)
                                                                            ├─ Nginx
                                                                            ├─ FastAPI
                                                                            ├─ Umami (방문 분석)
                                                                            ├─ PostgreSQL ──▶ S3 백업 (매일, 30일 보관)
-                                                                           └─ Prometheus, Grafana ──▶ 텔레그램 알림
+                                                                           ├─ Prometheus, Alertmanager ──▶ 텔레그램 알림
+                                                                           └─ Grafana (필요할 때만 실행)
 FastAPI ──(콘텐츠 공개)──▶ GitHub Actions ──▶ 정적 사이트 재빌드 ──▶ S3 + CloudFront 캐시 무효화
 운영자 ──▶ SSM Session Manager ──▶ EC2 (SQLAdmin, Grafana, Umami 관리 화면 포트 포워딩)
 외부 헬스체크 (UptimeRobot, ADR 0019) ──▶ 텔레그램 알림

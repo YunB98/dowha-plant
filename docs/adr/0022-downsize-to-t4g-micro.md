@@ -37,14 +37,23 @@ ADR 0021의 t4g.small 구성은 월 약 21~23달러로, 목표(월 20달러 이�
 | OS, Docker | 약 150MB | |
 | Nginx | 32MB | |
 | FastAPI | 160MB | uvicorn 워커 1개 |
-| PostgreSQL | 192MB | `shared_buffers=48MB`, `max_connections=20` |
-| Prometheus | 128MB | 수집 주기 60초, 보관 7일 |
+| PostgreSQL | 192MB | `shared_buffers=48MB`, `max_connections=20`. 앱과 Umami가 같은 서버를 쓰고 데이터베이스만 나눈다 |
+| Umami | 224MB | 방문 분석 (ADR 0014 유지) |
+| Prometheus | 96MB | 수집 주기 60초, 보관 7일 |
+| Alertmanager | 32MB | 장애 알림 → 텔레그램 |
 | node-exporter | 32MB | |
-| Grafana | 128MB | |
-| **소계** | **약 820MB** | |
-| 방문 분석 | ? | 아래 참고 |
+| **상시 실행 소계** | **약 920MB** | |
+| Grafana | 128MB | **필요할 때만 실행** (아래) |
 
-**Umami(Node.js, 약 200MB 이상)를 더하면 1GB를 넘는다.** 스왑으로 버틸 수는 있지만 응답이 느려진다. 방문 분석 도구는 별도로 다시 정한다 (ADR 0014 재검토).
+### Umami를 유지하는 대신 Grafana를 필요할 때만 켠다
+- 방문 분석 도구로 더 가벼운 GoatCounter(약 30MB)도 검토했지만, 화면이 보기 좋은 Umami를 유지하기로 했다.
+- 그 대신 Grafana를 상시 실행에서 뺀다. Docker Compose 프로필(`dashboard`)로 두고, 대시보드를 볼 때만 SSM 접속 후 켠다.
+  ```bash
+  docker compose --profile dashboard up -d grafana    # 볼 때
+  docker compose --profile dashboard stop grafana     # 다 보면
+  ```
+- **알림은 Grafana가 아니라 Alertmanager가 보낸다.** 그래서 Grafana가 꺼져 있어도 장애 알림은 계속 온다. 알림 규칙은 Prometheus 규칙 파일로 코드에 둔다.
+- 상시 메모리가 1GB에 가까우므로 스왑(2GB)이 일부 쓰이는 것은 정상이다. 아래 기준을 넘으면 서버를 올린다.
 
 ## 다시 올리는 기준
 아래 중 하나가 1주일 이상 계속되면 `instance_type`을 t4g.small로 바꾼다 (변수 하나만 바꾸면 되고, 서버가 잠깐 재시작된다).
