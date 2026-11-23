@@ -1,0 +1,27 @@
+#!/bin/bash
+# 최초 부팅 1회 실행. 애플리케이션 배포(docker compose 파일, 인증서)는 이후 SSM으로 한다.
+set -euo pipefail
+exec > >(tee -a /var/log/user-data.log) 2>&1
+
+dnf -y update
+dnf -y install docker
+systemctl enable --now docker
+
+# Docker Compose 플러그인
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/download/v${compose_version}/docker-compose-linux-aarch64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
+
+# 메모리 2GB 서버에서 컨테이너 여러 개를 돌리므로 스왑을 둔다.
+if [ ! -f /swapfile ]; then
+  fallocate -l ${swap_size_mb}M /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+fi
+
+mkdir -p /opt/dowha
+echo "bootstrap complete"

@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `bootstrap/` | S3 `bootstrap/terraform.tfstate` (최초 apply는 로컬 후 이전) | Terraform 상태 저장용 S3 버킷 | 최초 1회 |
 | `global/` | S3 `global/terraform.tfstate` | Route 53 호스팅 영역, GitHub Actions OIDC 역할 | 거의 없음 |
-| `envs/prod/` | S3 `prod/terraform.tfstate` | 운영 환경. 현재 네트워크, S3 버킷 (다음: EC2, CloudFront) | 변경 시 |
+| `envs/prod/` | S3 `prod/terraform.tfstate` | 운영 환경: 네트워크, S3 버킷, EC2, ECR, CloudFront, 인증서, DNS | 변경 시 |
 | `envs/staging/` | S3 `staging/terraform.tfstate` | 검증 환경, 필요할 때만 생성 후 삭제 | 필요 시 |
 
 상태 잠금은 DynamoDB 없이 S3 네이티브 잠금(`use_lockfile`)을 쓴다. Terraform 1.10 이상 필요.

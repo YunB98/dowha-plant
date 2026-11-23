@@ -37,3 +37,14 @@ variable "backup_retention_days" {
   type    = number
   default = 30
 }
+
+variable "instance_type" {
+  type    = string
+  default = "t4g.small"
+}
+
+variable "server_az" {
+  description = "서버를 둘 가용 영역 (public_subnets의 키 중 하나)"
+  type        = string
+  default     = "ap-northeast-2a"
+}
