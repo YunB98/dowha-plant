@@ -1,0 +1,13 @@
+# 서버(Linux)와 CloudFront에서 실행되는 파일은 Windows에서도 항상 LF 줄바꿈을 쓴다.
+# CRLF가 섞이면 user_data 스크립트가 깨지고, 로컬과 CI의 terraform plan 결과가 달라진다.
+* text=auto
+*.tf        text eol=lf
+*.tfvars    text eol=lf
+*.hcl       text eol=lf
+*.tftpl     text eol=lf
+*.sh        text eol=lf
+*.js        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+Dockerfile  text eol=lf

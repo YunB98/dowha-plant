@@ -30,7 +30,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 |---|---|---|
 | 400 | `BAD_REQUEST` | 요청 형식 오류 |
 | 401 | `UNAUTHORIZED` | 로그인 필요, 세션 만료 |
-| 403 | `FORBIDDEN` | 권한 없음 |
+| ~~403~~ | - | **쓰지 않는다.** CloudFront가 403을 404 페이지로 바꾸기 때문에(ADR 0021) 권한 문제도 401로 응답한다 |
 | 404 | `NOT_FOUND` | 대상 없음 (비공개 포함) |
 | 409 | `CONFLICT` | 공개된 가이드의 slug 변경 시도 등 |
 | 422 | `VALIDATION_ERROR` | 입력값 검증 실패 (FastAPI 기본 응답을 위 형식으로 변환) |
@@ -262,7 +262,7 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 
 | 요청 | 본문 | 설명 |
 |---|---|---|
-| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 `{대상}/{id}/`로 옮기고 연결 |
+| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 `images/{대상}/{id}/`로 옮기고 연결 (CloudFront `/images/*`로만 공개, ADR 0021) |
 | `PUT /admin/{대상}/{id}/images/order` | `{ "image_ids": [7, 3, 5] }` | 첫 번째가 대표 사진 |
 | `PATCH /admin/images/{image_id}` | `{ "alt_text": "..." }` | 설명 수정 |
 | `DELETE /admin/images/{image_id}` | | DB와 S3에서 삭제 |

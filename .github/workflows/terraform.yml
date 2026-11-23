@@ -45,7 +45,7 @@ jobs:
 
       - name: terraform validate
         run: |
-          for stack in infra/bootstrap infra/global; do
+          for stack in infra/bootstrap infra/global infra/envs/prod; do
             echo "::group::$stack"
             terraform -chdir="$stack" init -backend=false
             terraform -chdir="$stack" validate
@@ -53,7 +53,7 @@ jobs:
           done
 
   plan:
-    name: plan (${{ matrix.stack }})
+    name: plan (${{ matrix.name }})
     needs: check
     runs-on: ubuntu-latest
     permissions:
@@ -62,10 +62,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [bootstrap, global]
+        include:
+          - name: bootstrap
+            path: infra/bootstrap
+          - name: global
+            path: infra/global
+          - name: prod
+            path: infra/envs/prod
     defaults:
       run:
-        working-directory: infra/${{ matrix.stack }}
+        working-directory: ${{ matrix.path }}
     steps:
       - uses: actions/checkout@v7
 
@@ -82,10 +88,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # backend.hcl은 계정 ID가 들어 있어 git에 올리지 않는다. 로그인한 계정에서 버킷 이름을 만든다.
+      # 스택 폴더 깊이가 달라서(envs/prod) 절대 경로를 쓴다.
       - name: backend 설정 생성
         run: |
           account_id="$(aws sts get-caller-identity --query Account --output text)"
-          cat > ../backend.hcl <<EOF
+          cat > "$GITHUB_WORKSPACE/infra/backend.hcl" <<EOF
           bucket       = "dowha-plant-tfstate-${account_id}"
           region       = "${AWS_REGION}"
           encrypt      = true
@@ -93,7 +100,7 @@ jobs:
           EOF
 
       - name: terraform init
-        run: terraform init -backend-config=../backend.hcl
+        run: terraform init -backend-config="$GITHUB_WORKSPACE/infra/backend.hcl"
 
       - name: terraform plan
         id: plan
@@ -109,7 +116,7 @@ jobs:
       - name: plan 요약
         run: |
           {
-            echo "### ${{ matrix.stack }}"
+            echo "### ${{ matrix.name }}"
             if [ "$(cat has_changes)" = "true" ]; then
               echo "변경 있음"
               echo '```'
@@ -125,14 +132,14 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: tfplan-${{ matrix.stack }}
+          name: tfplan-${{ matrix.name }}
           path: |
-            infra/${{ matrix.stack }}/tfplan
-            infra/${{ matrix.stack }}/has_changes
+            ${{ matrix.path }}/tfplan
+            ${{ matrix.path }}/has_changes
           retention-days: 3
 
   apply:
-    name: apply (${{ matrix.stack }})
+    name: apply (${{ matrix.name }})
     needs: plan
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -145,17 +152,23 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        stack: [bootstrap, global]
+        include:
+          - name: bootstrap
+            path: infra/bootstrap
+          - name: global
+            path: infra/global
+          - name: prod
+            path: infra/envs/prod
     defaults:
       run:
-        working-directory: infra/${{ matrix.stack }}
+        working-directory: ${{ matrix.path }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
-          name: tfplan-${{ matrix.stack }}
-          path: infra/${{ matrix.stack }}
+          name: tfplan-${{ matrix.name }}
+          path: ${{ matrix.path }}
 
       - name: 변경 여부 확인
         id: changes
@@ -179,7 +192,7 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         run: |
           account_id="$(aws sts get-caller-identity --query Account --output text)"
-          cat > ../backend.hcl <<EOF
+          cat > "$GITHUB_WORKSPACE/infra/backend.hcl" <<EOF
           bucket       = "dowha-plant-tfstate-${account_id}"
           region       = "${AWS_REGION}"
           encrypt      = true
@@ -188,7 +201,7 @@ jobs:
 
       - name: terraform init
         if: steps.changes.outputs.has_changes == 'true'
-        run: terraform init -backend-config=../backend.hcl
+        run: terraform init -backend-config="$GITHUB_WORKSPACE/infra/backend.hcl"
 
       # 승인 전에 검토한 plan 파일을 그대로 적용한다. 그 사이 상태가 바뀌었으면 Terraform이 거부한다.
       - name: terraform apply
@@ -198,4 +211,4 @@ jobs:
       - name: 변경 없음
         if: steps.changes.outputs.has_changes != 'true'
         run: |
-          echo "${{ matrix.stack }} - 변경 사항이 없어 apply를 건너뜁니다."
+          echo "${{ matrix.name }} - 변경 사항이 없어 apply를 건너뜁니다."
