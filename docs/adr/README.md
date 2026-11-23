@@ -20,3 +20,8 @@
 | [0013](0013-plant-guide-qr-indirection.md) | 식물 관리 QR은 짧은 코드로 간접 연결 | 채택 |
 | [0014](0014-analytics-umami.md) | 방문 분석은 Umami 직접 운영 | 채택 |
 | [0015](0015-static-content-pages-with-rebuild.md) | 콘텐츠 페이지는 빌드 시 HTML 생성, 공개 시 자동 재빌드 | 채택 |
+| [0016](0016-multi-account-and-sso.md) | AWS 멀티 계정 구조와 IAM Identity Center(SSO) | 채택 |
+| [0017](0017-organization-scp-guardrails.md) | 조직 SCP 가드레일 | 채택 |
+| [0018](0018-github-oidc-subject-format.md) | GitHub OIDC 신뢰 정책은 ID 포함 sub로 제한 | 채택 |
+| [0019](0019-external-health-check-uptimerobot.md) | 외부 헬스체크는 UptimeRobot | 채택 |
+| [0020](0020-prod-network-and-storage.md) | prod 네트워크와 저장소 구성 | 채택 |

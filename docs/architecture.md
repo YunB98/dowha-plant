@@ -13,7 +13,7 @@
                                                                            └─ Prometheus, Grafana ──▶ 텔레그램 알림
 FastAPI ──(콘텐츠 공개)──▶ GitHub Actions ──▶ 정적 사이트 재빌드 ──▶ S3 + CloudFront 캐시 무효화
 운영자 ──▶ SSM Session Manager ──▶ EC2 (SQLAdmin, Grafana, Umami 관리 화면 포트 포워딩)
-외부 헬스체크 (Route 53 헬스체크 또는 UptimeRobot) ──▶ 텔레그램 알림
+외부 헬스체크 (UptimeRobot, ADR 0019) ──▶ 텔레그램 알림
 ```
 
 ## 요청 흐름
