@@ -1,0 +1,201 @@
+name: terraform
+
+# PR: 포맷·검증 + plan (읽기 전용 역할)
+# main 반영: plan → production 환경 승인 → 검토한 plan 그대로 apply
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 같은 브랜치에서 겹쳐 실행되지 않게 한다. apply 도중 취소되면 상태가 꼬일 수 있으므로 취소하지 않는다.
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-2
+  TF_VERSION: 1.15.3
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  check:
+    name: fmt / validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff infra
+
+      - name: terraform validate
+        run: |
+          for stack in infra/bootstrap infra/global; do
+            echo "::group::$stack"
+            terraform -chdir="$stack" init -backend=false
+            terraform -chdir="$stack" validate
+            echo "::endgroup::"
+          done
+
+  plan:
+    name: plan (${{ matrix.stack }})
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC 토큰 발급
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [bootstrap, global]
+    defaults:
+      run:
+        working-directory: infra/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: AWS 로그인 (plan 역할, OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role-session-name: gha-plan-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # backend.hcl은 계정 ID가 들어 있어 git에 올리지 않는다. 로그인한 계정에서 버킷 이름을 만든다.
+      - name: backend 설정 생성
+        run: |
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          cat > ../backend.hcl <<EOF
+          bucket       = "dowha-plant-tfstate-${account_id}"
+          region       = "${AWS_REGION}"
+          encrypt      = true
+          use_lockfile = true
+          EOF
+
+      - name: terraform init
+        run: terraform init -backend-config=../backend.hcl
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -lock-timeout=5m -detailed-exitcode -out=tfplan -no-color > plan.txt 2>&1
+          code=$?
+          set -e
+          cat plan.txt
+          if [ "$code" -eq 1 ]; then exit 1; fi
+          if [ "$code" -eq 2 ]; then echo "true" > has_changes; else echo "false" > has_changes; fi
+
+      - name: plan 요약
+        run: |
+          {
+            echo "### ${{ matrix.stack }}"
+            if [ "$(cat has_changes)" = "true" ]; then
+              echo "변경 있음"
+              echo '```'
+              grep -E "^\s+# |^Plan:" plan.txt || true
+              echo '```'
+            else
+              echo "변경 없음"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # main에서만 apply 단계로 plan 파일을 넘긴다.
+      - name: plan 파일 업로드
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.stack }}
+          path: |
+            infra/${{ matrix.stack }}/tfplan
+            infra/${{ matrix.stack }}/has_changes
+          retention-days: 3
+
+  apply:
+    name: apply (${{ matrix.stack }})
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # production 환경: 승인자 확인 후 실행된다. apply 역할은 이 환경에서만 쓸 수 있다.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        stack: [bootstrap, global]
+    defaults:
+      run:
+        working-directory: infra/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ matrix.stack }}
+          path: infra/${{ matrix.stack }}
+
+      - name: 변경 여부 확인
+        id: changes
+        run: echo "has_changes=$(cat has_changes)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v3
+        if: steps.changes.outputs.has_changes == 'true'
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: AWS 로그인 (apply 역할, OIDC)
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
+          role-session-name: gha-apply-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: backend 설정 생성
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          cat > ../backend.hcl <<EOF
+          bucket       = "dowha-plant-tfstate-${account_id}"
+          region       = "${AWS_REGION}"
+          encrypt      = true
+          use_lockfile = true
+          EOF
+
+      - name: terraform init
+        if: steps.changes.outputs.has_changes == 'true'
+        run: terraform init -backend-config=../backend.hcl
+
+      # 승인 전에 검토한 plan 파일을 그대로 적용한다. 그 사이 상태가 바뀌었으면 Terraform이 거부한다.
+      - name: terraform apply
+        if: steps.changes.outputs.has_changes == 'true'
+        run: terraform apply -lock-timeout=5m -no-color tfplan
+
+      - name: 변경 없음
+        if: steps.changes.outputs.has_changes != 'true'
+        run: |
+          echo "${{ matrix.stack }} - 변경 사항이 없어 apply를 건너뜁니다."

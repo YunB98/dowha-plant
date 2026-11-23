@@ -4,7 +4,7 @@
 
 | 스택 | 상태 저장 위치 | 내용 | 실행 빈도 |
 |---|---|---|---|
-| `bootstrap/` | 처음엔 로컬 → S3 `bootstrap/terraform.tfstate` | Terraform 상태 저장용 S3 버킷 | 최초 1회 |
+| `bootstrap/` | S3 `bootstrap/terraform.tfstate` (최초 apply는 로컬 후 이전) | Terraform 상태 저장용 S3 버킷 | 최초 1회 |
 | `global/` | S3 `global/terraform.tfstate` | Route 53 호스팅 영역, GitHub Actions OIDC 역할 | 거의 없음 |
 | `envs/prod/` | S3 `prod/terraform.tfstate` | 운영 환경 (EC2, S3, CloudFront 등) | 변경 시 |
 | `envs/staging/` | S3 `staging/terraform.tfstate` | 검증 환경, 필요할 때만 생성 후 삭제 | 필요 시 |
@@ -17,10 +17,28 @@
 - 로컬에서 쓸 AWS 자격 증명. **IAM Identity Center(SSO) 로그인을 권장**한다. 장기 액세스 키를 쓴다면 MFA를 켜고 주기적으로 교체한다.
 
 ```bash
-aws configure sso          # 최초 1회
-aws sso login              # 세션 만료 시
-aws sts get-caller-identity
+aws configure sso                             # 최초 1회, 프로필 이름 dowha-admin
+aws sso login --profile dowha-admin           # 세션 만료 시 (4시간)
+export AWS_PROFILE=dowha-admin                # PowerShell: $env:AWS_PROFILE = "dowha-admin"
+aws sts get-caller-identity                   # Dowha-plant 계정 번호가 나와야 한다
 ```
+
+`AWS_PROFILE`을 지정하지 않으면 `default` 프로필로 접속해 `InvalidClientTokenId` 오류가 날 수 있다.
+
+## CI/CD (GitHub Actions)
+
+워크플로: [`.github/workflows/terraform.yml`](../.github/workflows/terraform.yml)
+
+| 이벤트 | 실행 내용 | AWS 역할 |
+|---|---|---|
+| `infra/**`를 바꾼 PR | fmt 검사, validate, 스택별 plan (결과는 실행 요약에 표시) | plan 역할 (읽기 전용) |
+| main에 머지 | plan → **production 환경 승인 대기** → 승인하면 검토한 plan 파일 그대로 apply | plan 역할 → apply 역할 |
+| 수동 실행 (`workflow_dispatch`) | main에서 실행하면 위와 같음 | |
+
+- AWS 액세스 키를 GitHub에 저장하지 않는다. OIDC로 작업마다 임시 자격 증명을 받는다.
+- `backend.hcl`은 git에 없으므로, CI가 로그인한 계정 ID로 버킷 이름을 만들어 생성한다.
+- 변경이 없는 스택은 승인 후에도 apply를 건너뛴다.
+- plan과 apply 사이에 상태가 바뀌면 저장된 plan 적용이 거부된다. 그때는 워크플로를 다시 실행한다.
 
 ## 최초 구축 순서
 
