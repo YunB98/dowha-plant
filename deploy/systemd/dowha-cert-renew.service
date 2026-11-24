@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew origin TLS certificate (Let's Encrypt DNS-01)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/dowha/scripts/renew-cert.sh

@@ -1,0 +1,48 @@
+# 알림은 Grafana가 아니라 이 규칙과 Alertmanager가 보낸다 (Grafana가 꺼져 있어도 알림이 온다, ADR 0022).
+# 서버 전체가 멈춘 경우는 여기서 알 수 없으므로 UptimeRobot이 맡는다 (ADR 0019).
+groups:
+  - name: server
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} 수집 실패 (5분)"
+
+      # ADR 0022 서버 키우는 기준: 스왑 500MB 초과 지속
+      - alert: SwapHigh
+        expr: (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) > 500 * 1024 * 1024
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "스왑 사용량 {{ $value | humanize1024 }}B (1시간 이상). t4g.small 검토"
+
+      - alert: MemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "사용 가능한 메모리 5% 미만 (10분)"
+
+      - alert: DiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{mountpoint="/", fstype!~"tmpfs|overlay"}
+            / node_filesystem_size_bytes{mountpoint="/", fstype!~"tmpfs|overlay"} < 0.15
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "루트 디스크 여유 공간 {{ $value | humanizePercentage }}"
+
+      # standard 크레딧이라 크레딧을 다 쓰면 기본 성능(10%)으로 느려진다 (ADR 0022)
+      - alert: CpuHighSustained
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[10m])) > 0.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU 사용률 50% 이상 30분 지속 (CPU 크레딧 소진 위험)"
