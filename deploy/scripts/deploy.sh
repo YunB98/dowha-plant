@@ -21,22 +21,32 @@ cd "$APP_DIR"
 umask 077
 
 # --- 1. 비밀값 -------------------------------------------------------------
+# 이름으로 직접 읽는다. 서버 역할은 ${PREFIX}/* 아래 값만 읽을 수 있고,
+# get-parameters-by-path는 경로 자체(${PREFIX})에 대한 권한을 따로 요구하기 때문이다.
+KEYS=(origin-verify-secret postgres-password umami-db-password umami-app-secret
+      grafana-admin-password telegram-bot-token telegram-chat-id)
+NAMES=()
+for key in "${KEYS[@]}"; do NAMES+=("${PREFIX}/${key}"); done
+
+# 먼저 값 없이 확인한다. 권한 오류면 AWS CLI 오류가 그대로 보이고 여기서 멈춘다.
+missing="$(aws ssm get-parameters --names "${NAMES[@]}" --query 'InvalidParameters' --output text)"
+if [ -n "$missing" ]; then
+  echo "SSM 파라미터가 없습니다 (deploy/README.md 참고): $missing" >&2
+  exit 1
+fi
+
 declare -A P
 while IFS=$'\t' read -r name value; do
   P["${name#"$PREFIX"/}"]="$value"
-done < <(aws ssm get-parameters-by-path --region "$REGION" --path "$PREFIX" \
-          --recursive --with-decryption --query 'Parameters[].[Name,Value]' --output text)
+done < <(aws ssm get-parameters --names "${NAMES[@]}" --with-decryption \
+          --query 'Parameters[].[Name,Value]' --output text)
 
-require() {
-  for key in "$@"; do
-    if [ -z "${P[$key]:-}" ]; then
-      echo "SSM 파라미터 ${PREFIX}/${key} 가 없습니다 (deploy/README.md 참고)" >&2
-      exit 1
-    fi
-  done
-}
-require origin-verify-secret postgres-password umami-db-password umami-app-secret \
-        grafana-admin-password telegram-bot-token telegram-chat-id
+for key in "${KEYS[@]}"; do
+  if [ -z "${P[$key]:-}" ]; then
+    echo "SSM 파라미터 ${PREFIX}/${key} 를 읽지 못했습니다" >&2
+    exit 1
+  fi
+done
 
 # 작은따옴표로 감싸면 Compose가 값 안의 $를 변수로 해석하지 않는다.
 cat > .env <<EOF
