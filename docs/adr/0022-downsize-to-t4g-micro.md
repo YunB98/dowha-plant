@@ -69,6 +69,20 @@ ADR 0021의 t4g.small 구성은 월 약 21~23달러로, 목표(월 20달러 이�
 Umami 여유가 50MB뿐이라 Prometheus에서 32MB를 옮겨 **Umami 256MB, Prometheus 64MB**로 바꿨다. 상시 합계(768MB)는 그대로다.
 로컬은 x86_64라 ARM 서버와 조금 다를 수 있으므로, 배포 후 서버에서 다시 측정해 이 표를 갱신한다.
 
+### 운영 서버 측정 (2026-11-24, 첫 배포 후 약 20분, 트래픽 없음)
+| 구성 | 제한 | 사용량 |
+|---|---|---|
+| Umami | 256MB | 139MB |
+| Prometheus | 64MB | 29MB |
+| FastAPI | 160MB | 37MB |
+| PostgreSQL | 192MB | 28MB |
+| Alertmanager | 32MB | 19MB |
+| node-exporter | 32MB | 10MB |
+| Nginx | 32MB | 8MB |
+| **서버 전체** | 910MB | 사용 469MB, 사용 가능 344MB, **스왑 102MB** |
+
+ARM 서버에서는 Umami가 로컬보다 적게 쓴다. 다시 올리는 기준(스왑 500MB)까지 여유가 있다.
+
 ## 다시 올리는 기준
 아래 중 하나가 1주일 이상 계속되면 `instance_type`을 t4g.small로 바꾼다 (변수 하나만 바꾸면 되고, 서버가 잠깐 재시작된다).
 - 스왑 사용량이 500MB를 넘는 상태가 지속됨

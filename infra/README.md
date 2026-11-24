@@ -32,12 +32,12 @@ aws sts get-caller-identity                   # Dowha-plant 계정 번호가 나
 | 이벤트 | 실행 내용 | AWS 역할 |
 |---|---|---|
 | `infra/**`를 바꾼 PR | fmt 검사, validate, 스택별 plan (결과는 실행 요약에 표시) | plan 역할 (읽기 전용) |
-| main에 머지 | plan → **production 환경 승인 대기** → 승인하면 검토한 plan 파일 그대로 apply | plan 역할 → apply 역할 |
+| main에 머지 | plan → 변경 확인 → **production 승인 1번** → 변경 있는 스택만 bootstrap → global → prod 순서로, 검토한 plan 파일 그대로 apply | plan 역할 → apply 역할 |
 | 수동 실행 (`workflow_dispatch`) | main에서 실행하면 위와 같음 | |
 
 - AWS 액세스 키를 GitHub에 저장하지 않는다. OIDC로 작업마다 임시 자격 증명을 받는다.
 - `backend.hcl`은 git에 없으므로, CI가 로그인한 계정 ID로 버킷 이름을 만들어 생성한다.
-- 변경이 없는 스택은 승인 후에도 apply를 건너뛴다.
+- 모든 스택에 변경이 없으면 apply 작업이 실행되지 않아 승인 요청도 뜨지 않는다. 앞 스택이 실패하면 뒤 스택은 apply하지 않는다.
 - plan과 apply 사이에 상태가 바뀌면 저장된 plan 적용이 거부된다. 그때는 워크플로를 다시 실행한다.
 
 ## 최초 구축 순서

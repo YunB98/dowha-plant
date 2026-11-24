@@ -1,7 +1,7 @@
 name: terraform
 
 # PR: 포맷·검증 + plan (읽기 전용 역할)
-# main 반영: plan → production 환경 승인 → 검토한 plan 그대로 apply
+# main 반영: plan → 변경 확인 → (변경 있을 때만) production 승인 1번 → 검토한 plan 그대로 apply
 on:
   pull_request:
     paths:
@@ -138,50 +138,58 @@ jobs:
             ${{ matrix.path }}/has_changes
           retention-days: 3
 
-  apply:
-    name: apply (${{ matrix.name }})
+  # plan 결과를 모아 apply할 스택을 정한다. 변경이 없으면 승인 요청 자체를 띄우지 않는다.
+  changes:
+    name: 변경 확인
     needs: plan
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.collect.outputs.stacks }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: tfplan-*
+          path: plans
+
+      - name: 변경 있는 스택
+        id: collect
+        run: |
+          stacks=""
+          for name in bootstrap global prod; do   # 적용 순서
+            if [ "$(cat "plans/tfplan-$name/has_changes")" = "true" ]; then
+              stacks="$stacks $name"
+            fi
+          done
+          stacks="${stacks# }"
+          echo "stacks=$stacks" >> "$GITHUB_OUTPUT"
+          echo "### apply 대상: ${stacks:-없음}" >> "$GITHUB_STEP_SUMMARY"
+
+  # 승인 한 번으로 변경 있는 스택을 순서대로 apply한다 (예전에는 스택마다 승인을 받았다).
+  apply:
+    name: apply
+    needs: changes
+    if: needs.changes.outputs.stacks != ''
     runs-on: ubuntu-latest
     # production 환경: 승인자 확인 후 실행된다. apply 역할은 이 환경에서만 쓸 수 있다.
     environment: production
     permissions:
       contents: read
       id-token: write
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - name: bootstrap
-            path: infra/bootstrap
-          - name: global
-            path: infra/global
-          - name: prod
-            path: infra/envs/prod
-    defaults:
-      run:
-        working-directory: ${{ matrix.path }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
-          name: tfplan-${{ matrix.name }}
-          path: ${{ matrix.path }}
-
-      - name: 변경 여부 확인
-        id: changes
-        run: echo "has_changes=$(cat has_changes)" >> "$GITHUB_OUTPUT"
+          pattern: tfplan-*
+          path: plans
 
       - uses: hashicorp/setup-terraform@v4
-        if: steps.changes.outputs.has_changes == 'true'
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
       - name: AWS 로그인 (apply 역할, OIDC)
-        if: steps.changes.outputs.has_changes == 'true'
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
@@ -189,7 +197,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: backend 설정 생성
-        if: steps.changes.outputs.has_changes == 'true'
         run: |
           account_id="$(aws sts get-caller-identity --query Account --output text)"
           cat > "$GITHUB_WORKSPACE/infra/backend.hcl" <<EOF
@@ -199,16 +206,19 @@ jobs:
           use_lockfile = true
           EOF
 
-      - name: terraform init
-        if: steps.changes.outputs.has_changes == 'true'
-        run: terraform init -backend-config="$GITHUB_WORKSPACE/infra/backend.hcl"
-
       # 승인 전에 검토한 plan 파일을 그대로 적용한다. 그 사이 상태가 바뀌었으면 Terraform이 거부한다.
+      # 앞 스택이 실패하면 뒤 스택은 apply하지 않는다.
       - name: terraform apply
-        if: steps.changes.outputs.has_changes == 'true'
-        run: terraform apply -lock-timeout=5m -no-color tfplan
-
-      - name: 변경 없음
-        if: steps.changes.outputs.has_changes != 'true'
+        env:
+          STACKS: ${{ needs.changes.outputs.stacks }}
         run: |
-          echo "${{ matrix.name }} - 변경 사항이 없어 apply를 건너뜁니다."
+          declare -A path=([bootstrap]=infra/bootstrap [global]=infra/global [prod]=infra/envs/prod)
+          for name in $STACKS; do
+            dir="${path[$name]}"
+            echo "::group::apply $name ($dir)"
+            cp "plans/tfplan-$name/tfplan" "$dir/tfplan"
+            terraform -chdir="$dir" init -backend-config="$GITHUB_WORKSPACE/infra/backend.hcl"
+            terraform -chdir="$dir" apply -lock-timeout=5m -no-color tfplan
+            echo "::endgroup::"
+            echo "- $name: 적용 완료" >> "$GITHUB_STEP_SUMMARY"
+          done
