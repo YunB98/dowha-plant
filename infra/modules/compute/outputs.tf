@@ -19,3 +19,11 @@ output "role_name" {
 output "ecr_repository_url" {
   value = aws_ecr_repository.backend.repository_url
 }
+
+output "ecr_repository_arn" {
+  value = aws_ecr_repository.backend.arn
+}
+
+output "instance_arn" {
+  value = aws_instance.this.arn
+}
