@@ -81,7 +81,7 @@ services:
   umami:
     image: ghcr.io/umami-software/umami:postgresql-v2.19.0
     restart: unless-stopped
-    mem_limit: 224m
+    mem_limit: 256m   # 로컬 측정: 대기 중 anon 약 173MB (ADR 0022 측정값)
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
       APP_SECRET: ${UMAMI_APP_SECRET}
@@ -97,7 +97,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.4.1
     restart: unless-stopped
-    mem_limit: 96m
+    mem_limit: 64m    # 로컬 측정: 약 23MB. 수집 대상이 적어 7일 보관도 작다
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus

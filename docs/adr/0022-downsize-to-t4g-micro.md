@@ -38,8 +38,8 @@ ADR 0021의 t4g.small 구성은 월 약 21~23달러로, 목표(월 20달러 이�
 | Nginx | 32MB | |
 | FastAPI | 160MB | uvicorn 워커 1개 |
 | PostgreSQL | 192MB | `shared_buffers=48MB`, `max_connections=20`. 앱과 Umami가 같은 서버를 쓰고 데이터베이스만 나눈다 |
-| Umami | 224MB | 방문 분석 (ADR 0014 유지) |
-| Prometheus | 96MB | 수집 주기 60초, 보관 7일 |
+| Umami | ~~224MB~~ **256MB** | 방문 분석 (ADR 0014 유지). 아래 측정값으로 조정 |
+| Prometheus | ~~96MB~~ **64MB** | 수집 주기 60초, 보관 7일 |
 | Alertmanager | 32MB | 장애 알림 → 텔레그램 |
 | node-exporter | 32MB | |
 | **상시 실행 소계** | **약 920MB** | |
@@ -54,6 +54,20 @@ ADR 0021의 t4g.small 구성은 월 약 21~23달러로, 목표(월 20달러 이�
   ```
 - **알림은 Grafana가 아니라 Alertmanager가 보낸다.** 그래서 Grafana가 꺼져 있어도 장애 알림은 계속 온다. 알림 규칙은 Prometheus 규칙 파일로 코드에 둔다.
 - 상시 메모리가 1GB에 가까우므로 스왑(2GB)이 일부 쓰이는 것은 정상이다. 아래 기준을 넘으면 서버를 올린다.
+
+### 로컬 측정 후 조정 (2026-11-24)
+전체 스택을 로컬 Docker로 띄우고 Umami 수집 요청 200개를 동시에 보낸 뒤 cgroup 값을 확인했다.
+
+| 구성 | 제한 | 사용량 | 비고 |
+|---|---|---|---|
+| Umami | 224MB | 195MB (anon 173MB) | `memory.events max=302`: 제한에 계속 닿아 파일 캐시를 비우며 버팀. OOM은 없었음 |
+| Prometheus | 96MB | 23MB | 수집 대상 3개라 작음 |
+| FastAPI | 160MB | 32MB | 아직 헬스 체크만 있음. DB·S3 라이브러리가 붙으면 늘어난다 |
+| PostgreSQL | 192MB | 35MB | |
+| Grafana | 128MB | 91MB | |
+
+Umami 여유가 50MB뿐이라 Prometheus에서 32MB를 옮겨 **Umami 256MB, Prometheus 64MB**로 바꿨다. 상시 합계(768MB)는 그대로다.
+로컬은 x86_64라 ARM 서버와 조금 다를 수 있으므로, 배포 후 서버에서 다시 측정해 이 표를 갱신한다.
 
 ## 다시 올리는 기준
 아래 중 하나가 1주일 이상 계속되면 `instance_type`을 t4g.small로 바꾼다 (변수 하나만 바꾸면 되고, 서버가 잠깐 재시작된다).

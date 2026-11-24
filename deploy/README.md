@@ -7,8 +7,8 @@ EC2(t4g.micro) 한 대에서 Docker Compose로 실행한다. 이 폴더 내용�
 | nginx | 32MB | 443 (CloudFront만, 보안 그룹) |
 | api (FastAPI) | 160MB | Nginx 뒤 `/api/*`, `/q/*` |
 | postgres | 192MB | 없음 |
-| umami | 224MB | `/umami/script.js`, `/umami/api/send`만. 관리 화면 `127.0.0.1:3000` |
-| prometheus | 96MB | `127.0.0.1:9090` |
+| umami | 256MB | `/umami/script.js`, `/umami/api/send`만. 관리 화면 `127.0.0.1:3000` |
+| prometheus | 64MB | `127.0.0.1:9090` |
 | alertmanager | 32MB | 없음 (텔레그램으로 보냄) |
 | node-exporter | 32MB | 없음 |
 | grafana (`dashboard` 프로필) | 128MB | `127.0.0.1:3001`, 필요할 때만 |
