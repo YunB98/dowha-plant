@@ -42,3 +42,10 @@ aws ssm start-session --target <인스턴스 ID> \
   --document-name AWS-StartPortForwardingSession --parameters 'portNumber=3000,localPortNumber=3000'
 ```
 3000 Umami, 9090 Prometheus, 3001 Grafana (`docker compose --profile dashboard up -d grafana` 후).
+
+## CI 배포 (`.github/workflows/deploy.yml`, ADR 0023)
+`backend/`, `deploy/`가 바뀐 커밋이 main에 들어오면 production 승인 후 자동으로 위 배포를 실행한다.
+처음 한 번만 필요한 준비:
+1. prod 스택 apply로 배포 역할 생성 → `terraform output github_deploy_role_arn`
+2. GitHub `production` 환경 변수 `AWS_DEPLOY_ROLE_ARN`에 그 값을 넣는다
+3. 텔레그램 SSM 파라미터 두 개를 넣는다 (위 "비밀값")
