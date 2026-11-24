@@ -55,3 +55,15 @@ variable "server_az" {
   type        = string
   default     = "ap-northeast-2a"
 }
+
+variable "github_subject_prefix" {
+  description = "GitHub OIDC sub 클레임 앞부분 (global 스택과 같은 값, ADR 0018)"
+  type        = string
+  default     = "repo:YunB98@251148256/dowha-plant@1464295966"
+}
+
+variable "github_deploy_environment" {
+  description = "배포 역할을 쓸 수 있는 GitHub 환경 (승인 필요)"
+  type        = string
+  default     = "production"
+}

@@ -34,3 +34,8 @@ output "cloudfront_domain_name" {
 output "site_url" {
   value = "https://${var.domain_name}"
 }
+
+output "github_deploy_role_arn" {
+  description = "GitHub production 환경 변수 AWS_DEPLOY_ROLE_ARN에 넣는다"
+  value       = aws_iam_role.github_deploy.arn
+}
