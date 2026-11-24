@@ -76,6 +76,34 @@ resource "aws_ssm_parameter" "origin_verify" {
   value       = random_password.origin_verify.result
 }
 
+# 서버 애플리케이션 비밀값. deploy/scripts/deploy.sh가 SSM에서 읽어 .env를 만든다.
+# 텔레그램 봇 토큰·채팅 ID는 외부에서 발급받는 값이라 Terraform 상태에 두지 않고 직접 넣는다 (deploy/README.md).
+# 주의: DB 비밀번호는 데이터 볼륨을 처음 만들 때만 적용된다. 바꾸려면 DB 안에서도 직접 바꿔야 한다.
+locals {
+  app_secrets = {
+    "postgres-password"      = "PostgreSQL password for the app user (dowha)"
+    "umami-db-password"      = "PostgreSQL password for the umami user"
+    "umami-app-secret"       = "Umami APP_SECRET"
+    "grafana-admin-password" = "Grafana admin password"
+  }
+}
+
+resource "random_password" "app" {
+  for_each = local.app_secrets
+
+  length  = 40
+  special = false # .env와 접속 URL에 그대로 넣을 수 있게
+}
+
+resource "aws_ssm_parameter" "app" {
+  for_each = local.app_secrets
+
+  name        = "${local.ssm_parameter_prefix}/${each.key}"
+  description = each.value
+  type        = "SecureString"
+  value       = random_password.app[each.key].result
+}
+
 # ---------------------------------------------------------------------------
 # CDN
 # ---------------------------------------------------------------------------
