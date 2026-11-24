@@ -59,6 +59,18 @@ jobs:
           docker compose --env-file ci.env config --quiet
           docker compose --env-file ci.env --profile dashboard config --quiet
 
+      # 운영과 같은 길이(48자)의 비밀값과 테스트 인증서로 nginx -t를 돌린다.
+      # 짧은 값으로만 확인했다가 map_hash_bucket_size 오류로 첫 배포가 실패한 적이 있다.
+      - name: Nginx 설정 검사
+        working-directory: deploy
+        run: |
+          image="$(docker compose --env-file ci.env config --format json | jq -r .services.nginx.image)"
+          certs="$(mktemp -d)"
+          live="$certs/live/origin.dowha-plant.shop"
+          mkdir -p "$live"
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 1             -subj "/CN=origin.dowha-plant.shop" -keyout "$live/privkey.pem" -out "$live/fullchain.pem" 2>/dev/null
+          docker run --rm             --add-host api:127.0.0.1 --add-host umami:127.0.0.1             -e ORIGIN_DOMAIN=origin.dowha-plant.shop             -e ORIGIN_VERIFY_SECRET="$(openssl rand -hex 24)"             -e NGINX_ENVSUBST_FILTER='^ORIGIN_'             -v "$PWD/nginx/templates:/etc/nginx/templates:ro"             -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"             -v "$certs:/etc/letsencrypt:ro"             "$image" nginx -t
+
       - name: 셸 스크립트 검사
         run: shellcheck deploy/scripts/*.sh deploy/postgres/init/*.sh
 
