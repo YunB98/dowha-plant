@@ -9,3 +9,7 @@ INQUIRIES_SPAM = Counter("dowha_inquiries_spam_total", "허니팟에 걸린 문�
 NOTIFICATIONS_FAILED = Counter(
     "dowha_notifications_failed_total", "알림 실패 수", ["channel"]
 )
+QR_SCANS = Counter(
+    "dowha_qr_scans_total", "QR 스캔 수 (guide: 가이드로, fallback: 목록으로, unknown: 없는 코드)", ["result"]
+)
+QR_SCAN_FAILED = Counter("dowha_qr_scan_record_failed_total", "QR 스캔 기록 실패 수 (리디렉션은 했음)")

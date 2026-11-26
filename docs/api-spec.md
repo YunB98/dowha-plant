@@ -173,13 +173,17 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 
 | 상황 | 이동할 곳 | 스캔 기록 |
 |---|---|---|
-| 활성 코드 + 공개 가이드 연결 | `/guides/{slug}?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
-| 비활성 코드, 가이드 없음, 비공개 가이드 | `/guides?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
-| 없는 코드 | `/guides` | X |
+| 활성 코드 + 공개 가이드 연결 | `/guides/{slug}/?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
+| 비활성 코드, 가이드 없음, 비공개 가이드 | `/guides/?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
+| 없는 코드 | `/guides/` | X |
 
 - 대소문자를 구분하지 않는다 (`/q/ab12cd` = `/q/AB12CD`).
 - 응답에 `Cache-Control: no-store` (CloudFront가 캐시하면 스캔이 기록되지 않는다).
-- 스캔 기록에 실패해도 리디렉션은 반드시 한다.
+- 스캔 기록에 실패해도(DB 장애 포함) 리디렉션은 반드시 한다.
+- `Location`은 **상대 주소**다. 서버는 `origin.dowha-plant.shop` 이름으로 요청을 받으므로 절대 주소를 만들면 손님이 오리진으로 간다 (Nginx도 `absolute_redirect off`).
+- 사이트가 `trailingSlash: true`로 빌드되므로 끝에 `/`를 붙인다.
+- 요청 수 제한(IP당 초당 5회, 순간 10회)에 걸리면 Nginx가 JSON 대신 `/guides/`로 302 한다.
+- 지표: `dowha_qr_scans_total{result}` (`guide`, `fallback`, `unknown`), 기록 실패 `dowha_qr_scan_record_failed_total`
 
 ---
 
@@ -330,5 +334,5 @@ CloudFront 뒤에 있으므로 `X-Forwarded-For`에서 실제 손님 IP를 꺼�
 |---|---|
 | `POST /api/v1/inquiries` | IP당 한 번에 5회, 이후 1분에 1회 (`rate=1r/m burst=4`, 10분에 약 5회 수준) |
 | `POST /api/v1/admin/auth/login` | IP당 1분에 5회 |
-| `GET /q/*` | IP당 1초에 5회 |
+| `GET /q/*` | IP당 1초에 5회, 순간 10회. 넘으면 `/guides/`로 302 |
 | 그 외 | IP당 1초에 10회 (순간 20회까지 허용) |

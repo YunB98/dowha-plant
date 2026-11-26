@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import errors, inquiries
+from app import errors, inquiries, qr
 from app.config import get_settings
 from app.db import get_db
 
@@ -31,6 +31,7 @@ app = FastAPI(
 )
 errors.register(app)
 app.include_router(inquiries.router)
+app.include_router(qr.router)
 
 # Prometheus 수집 경로. Nginx는 /api/, /q/, /umami/ 만 넘기므로 밖에서는 닿지 않는다.
 app.mount("/metrics", make_asgi_app())

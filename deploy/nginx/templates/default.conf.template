@@ -37,6 +37,10 @@ server {
         return 403;
     }
 
+    # nginx가 만드는 리디렉션(return 302 등)을 상대 주소로. 기본값이면 server_name(origin...)을 붙여
+    # 손님을 오리진으로 보내 버린다 (QR 제한 응답에서 발견).
+    absolute_redirect off;
+
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_set_header Host $host;
@@ -64,8 +68,16 @@ server {
     }
 
     # QR 스캔 → FastAPI가 기록 후 302 (ADR 0013)
+    # 제한에 걸리면 JSON 대신 가이드 목록으로 보낸다 (휴대폰으로 스캔한 손님에게 오류를 보이지 않게)
     location /q/ {
+        limit_req zone=qr burst=10 nodelay;
+        error_page 429 = @qr_fallback;
         proxy_pass http://api;
+    }
+
+    location @qr_fallback {
+        add_header Cache-Control "no-store" always;
+        return 302 /guides/;
     }
 
     # Umami는 추적 스크립트와 수집 경로만 공개한다. 관리 화면은 SSM 포트 포워딩으로만 (ADR 0014)
