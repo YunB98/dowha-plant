@@ -88,20 +88,32 @@ install -m 644 systemd/dowha-cert-renew.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now dowha-cert-renew.timer
 
-# --- 3. 컨테이너 ------------------------------------------------------------
+# --- 3. 설정 검사와 변경 표시 --------------------------------------------------
+# 배포는 설정 폴더를 지우고 새로 복사한다. 실행 중인 컨테이너의 bind mount는 지워진 옛 폴더를 계속 가리켜서
+# reload나 SIGHUP으로는 새 설정을 읽지 못한다 (2026-11-26: 요청 수 제한·api 수집·새 경보가 적용되지 않았다).
+# 설정 해시를 컨테이너 라벨로 넘겨, 바뀐 서비스만 compose가 다시 만들게 한다.
+config_hash() { find "$@" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16; }
+{
+  echo "NGINX_CONFIG_HASH=$(config_hash nginx)"
+  echo "PROMETHEUS_CONFIG_HASH=$(config_hash monitoring/prometheus)"
+  echo "ALERTMANAGER_CONFIG_HASH=$(config_hash monitoring/alertmanager/rendered)"
+} >> .env
+
+# 다시 만들기 전에 새 설정을 임시 컨테이너로 검사한다. 틀리면 여기서 멈추고 실행 중인 서비스는 그대로다.
+docker compose run --rm --no-deps -T nginx nginx -t < /dev/null
+docker compose run --rm --no-deps -T --entrypoint promtool prometheus \
+  check config /etc/prometheus/prometheus.yml < /dev/null
+docker compose run --rm --no-deps -T --entrypoint amtool alertmanager \
+  check-config /etc/alertmanager/alertmanager.yml < /dev/null
+
+# --- 4. 컨테이너 ------------------------------------------------------------
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 docker compose pull --quiet
 docker compose up -d --remove-orphans
 
-# 설정 파일은 bind mount라 내용이 바뀌어도 compose가 컨테이너를 다시 만들지 않는다.
-# (2026-11-26: 요청 수 제한·api 수집·새 경보가 배포 후에도 적용되지 않았다) 매번 검사 후 다시 읽게 한다.
-docker compose exec -T nginx nginx -t < /dev/null
-docker compose exec -T nginx nginx -s reload < /dev/null
-docker compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml < /dev/null
-docker compose kill -s HUP prometheus alertmanager
 docker compose ps
 
-# --- 4. 정기 작업 -----------------------------------------------------------
+# --- 5. 정기 작업 -----------------------------------------------------------
 # 처리 끝난 문의의 개인정보 삭제 (매일 03:30 KST, backend/app/purge.py). api 컨테이너가 뜬 뒤에 켠다
 install -m 644 systemd/dowha-pii-purge.service /etc/systemd/system/
 install -m 644 systemd/dowha-pii-purge.timer /etc/systemd/system/
