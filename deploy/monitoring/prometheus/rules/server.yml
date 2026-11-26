@@ -57,6 +57,15 @@ groups:
         annotations:
           summary: "관리자 로그인 실패 {{ $value | printf \"%.0f\" }}회 (15분). 본인이 아니면 비밀번호를 바꾸세요 (set-password)"
 
+      # 보관 기간이 지난 개인정보가 남아 있다 (삭제 타이머가 멈췄거나 삭제 코드 오류). 법적 의무라 경보
+      - alert: PiiPurgeOverdue
+        expr: dowha_inquiries_pii_overdue > 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "보관 기간이 지난 문의 {{ $value }}건의 개인정보가 남아 있어요. journalctl -u dowha-pii-purge 확인"
+
       # 문의 알림이 실패하면 사장님이 문의를 놓칠 수 있다
       - alert: InquiryNotificationFailed
         expr: increase(dowha_notifications_failed_total[30m]) > 0

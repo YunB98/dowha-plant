@@ -1,0 +1,11 @@
+[Unit]
+Description=Purge expired inquiry personal data daily (03:30 KST)
+
+[Timer]
+# 서버 시간대는 UTC라서 한국 시간을 직접 적는다. 손님이 거의 없는 새벽
+OnCalendar=*-*-* 03:30:00 Asia/Seoul
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

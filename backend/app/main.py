@@ -7,14 +7,14 @@ import logging
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
-from prometheus_client import make_asgi_app
+from prometheus_client import REGISTRY, make_asgi_app
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import admin_content, admin_inquiries, admin_qr, admin_settings, admin_summary, admin_uploads, auth, errors, inquiries, public, qr
+from app import admin_content, admin_inquiries, admin_qr, admin_settings, admin_summary, admin_uploads, auth, errors, inquiries, public, purge, qr
 from app.config import get_settings
-from app.db import get_db
+from app.db import SessionLocal, get_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 # httpx는 요청 URL을 INFO로 남기는데, 텔레그램 URL에는 봇 토큰이 들어 있다
@@ -41,6 +41,9 @@ app.include_router(admin_qr.router)
 app.include_router(admin_settings.router)
 app.include_router(admin_uploads.router)
 app.include_router(admin_content.router)
+
+# 보관 기간이 지난 개인정보가 남아 있는지 (app.purge). 수집할 때마다 DB에서 센다
+REGISTRY.register(purge.OverdueCollector(SessionLocal))
 
 # Prometheus 수집 경로. Nginx는 /api/, /q/, /umami/ 만 넘기므로 밖에서는 닿지 않는다.
 app.mount("/metrics", make_asgi_app())

@@ -87,3 +87,10 @@ aws ecr get-login-password --region "$REGION" | docker login --username AWS --pa
 docker compose pull --quiet
 docker compose up -d --remove-orphans
 docker compose ps
+
+# --- 4. 정기 작업 -----------------------------------------------------------
+# 처리 끝난 문의의 개인정보 삭제 (매일 03:30 KST, backend/app/purge.py). api 컨테이너가 뜬 뒤에 켠다
+install -m 644 systemd/dowha-pii-purge.service /etc/systemd/system/
+install -m 644 systemd/dowha-pii-purge.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now dowha-pii-purge.timer
