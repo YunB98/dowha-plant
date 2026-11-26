@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import admin_inquiries, auth, errors, inquiries, public, qr
+from app import admin_inquiries, admin_qr, admin_settings, admin_summary, auth, errors, inquiries, public, qr
 from app.config import get_settings
 from app.db import get_db
 
@@ -36,6 +36,9 @@ app.include_router(inquiries.router)
 app.include_router(qr.router)
 app.include_router(auth.router)
 app.include_router(admin_inquiries.router)
+app.include_router(admin_summary.router)
+app.include_router(admin_qr.router)
+app.include_router(admin_settings.router)
 
 # Prometheus 수집 경로. Nginx는 /api/, /q/, /umami/ 만 넘기므로 밖에서는 닿지 않는다.
 app.mount("/metrics", make_asgi_app())

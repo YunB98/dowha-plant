@@ -230,6 +230,9 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
   "content": { "cases": 6, "guides_published": 10, "showcase": 12 }
 }
 ```
+- `this_month`: 한국 시간 1일 0시부터 (UTC+9 고정, 한국은 서머타임이 없다)
+- `content`: 모두 **공개된 것만** 센다 (손님이 보는 숫자)
+- 구현: `backend/app/admin_summary.py`
 
 ### 문의
 
@@ -321,6 +324,13 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 
 QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 비활성화만 한다.
 
+구현: `backend/app/admin_qr.py`
+- 코드: 헷갈리는 문자(`0 O 1 I L`)를 뺀 31글자 중 6자리 (약 8억 가지), 겹치면 다시 뽑는다
+- 응답: `code`, `url`(`https://dowha-plant.shop/q/{code}`), `label`, `is_active`, `plant_guide`(`id`, `slug`, `name`, `status`), `scans_total`, `scans_last_30_days`
+- `PATCH`는 보낸 필드만 바꾼다. `"plant_guide_id": null`은 연결 해제 (스캔하면 가이드 목록으로). 코드 자체는 바꿀 수 없다
+- 비공개(`draft`) 가이드에도 연결할 수 있다. 공개 전에 카드를 먼저 인쇄할 수 있게
+- 이미지: 오류 정정 M, 여백 4칸, `size`는 칸 하나의 픽셀 수(1~40, 기본 10 → 약 370px). 테스트에서 실제로 디코딩해 주소를 확인한다
+
 ### 설정
 
 | 요청 | 설명 |
@@ -330,6 +340,22 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `PUT /admin/settings/brochure` | `{ "s3_key": "uploads/tmp/....pdf" }` → `files/brochure.pdf`로 옮기고 CloudFront 캐시를 무효화 |
 
 `privacy.retention_months` 같은 운영 설정은 운영자(SQLAdmin)만 바꾼다.
+
+구현: `backend/app/admin_settings.py`. 키는 손님용 `/store`와 같은 목록 하나로 관리한다.
+- 응답은 `{ "contact.phone": "010-1234-5678", ..., "outreach.brochure_url": "..." }` (`brochure_url`은 읽기 전용)
+- `null`이나 빈 문자열은 값 삭제 (손님 화면에서 그 항목을 숨긴다). 알 수 없는 키는 `422`
+
+| 키 | 검증 |
+|---|---|
+| `contact.phone` | 문의 접수와 같은 형식으로 맞춘다 (`01012345678` → `010-1234-5678`) |
+| `contact.instagram` | 계정 이름만 (`@`는 떼어 낸다) |
+| `contact.kakao_url` | `https://pf.kakao.com`, `open.kakao.com` |
+| `links.smartstore_url` | `https://smartstore.naver.com` (하위 도메인 포함) |
+| `links.naver_place_url` | `https://naver.me`, `map.naver.com`, `place.naver.com` |
+| `store.address`, `store.hours`, `outreach.service_area` | 200자 이하 |
+
+외부 링크를 정해진 주소로 제한하는 이유: 관리자 로그인이 털려도 손님을 피싱 사이트로 보내기 어렵게.
+소개서 교체(`PUT /admin/settings/brochure`)는 사진 업로드(S3)와 함께 만든다.
 
 ---
 
