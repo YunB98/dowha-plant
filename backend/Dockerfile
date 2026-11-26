@@ -11,6 +11,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY app ./app
+COPY alembic.ini start.sh ./
+COPY migrations ./migrations
 
 RUN useradd --system --uid 10001 app
 USER app
@@ -18,8 +20,8 @@ USER app
 EXPOSE 8000
 
 # 이미지에 curl이 없으므로 파이썬으로 확인한다.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
 
-# 메모리 160MB 제한이라 워커 1개 (ADR 0022)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# 마이그레이션 적용 후 uvicorn 실행
+CMD ["sh", "./start.sh"]

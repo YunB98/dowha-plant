@@ -11,6 +11,12 @@ def test_health() -> None:
     assert res.json() == {"status": "ok"}
 
 
+def test_ready_checks_database() -> None:
+    res = client.get("/api/v1/health/ready")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok", "database": "ok"}
+
+
 def test_docs_under_api_prefix() -> None:
     # CloudFront는 /api/* 만 서버로 보내므로 문서도 그 아래에 있어야 한다
     assert client.get("/api/docs").status_code == 200

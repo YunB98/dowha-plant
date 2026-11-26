@@ -39,6 +39,15 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 
 ---
 
+## 0. 시스템
+
+| 경로 | 용도 | 응답 |
+|---|---|---|
+| `GET /api/v1/health` | 프로세스 확인 (컨테이너 헬스 체크) | `200 {"status":"ok"}` |
+| `GET /api/v1/health/ready` | DB 연결까지 확인 (배포 확인, UptimeRobot) | `200 {"status":"ok","database":"ok"}`, DB 장애 시 `503` |
+
+---
+
 ## 1. 손님용 API (인증 없음)
 
 ### 가게 정보

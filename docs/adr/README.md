@@ -28,3 +28,4 @@
 | [0021](0021-prod-compute-and-cdn.md) | prod 서버와 CDN 구성 | 일부 대체됨 |
 | [0022](0022-downsize-to-t4g-micro.md) | 서버를 t4g.micro로 낮춰 월 20달러 이내 운영 | 채택 |
 | [0023](0023-app-deploy-pipeline.md) | 앱 배포: ARM 러너 빌드 + S3 배포 묶음 + SSM 명령 | 채택 |
+| [0024](0024-db-migrations-on-startup.md) | DB 마이그레이션은 Alembic, API 시작 시 적용 | 채택 |
