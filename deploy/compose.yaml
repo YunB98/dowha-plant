@@ -26,6 +26,10 @@ services:
       ORIGIN_VERIFY_SECRET: ${ORIGIN_VERIFY_SECRET}
       # 템플릿 안의 nginx 변수($host 등)는 건드리지 않고 이 두 값만 치환한다.
       NGINX_ENVSUBST_FILTER: "^ORIGIN_"
+    # 설정이 바뀌면 이 값이 바뀌어 compose가 컨테이너를 다시 만든다 (deploy.sh가 계산).
+    # bind mount는 배포가 폴더를 지우고 새로 복사하면 지워진 옛 폴더를 계속 가리키기 때문이다.
+    labels:
+      dowha.config-hash: ${NGINX_CONFIG_HASH:-none}
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -111,6 +115,8 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=7d
+    labels:
+      dowha.config-hash: ${PROMETHEUS_CONFIG_HASH:-none}
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
@@ -125,6 +131,8 @@ services:
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
+    labels:
+      dowha.config-hash: ${ALERTMANAGER_CONFIG_HASH:-none}
     volumes:
       # deploy.sh가 SSM 값으로 만든 설정 파일 (텔레그램 채팅 ID와 봇 토큰)
       - ./monitoring/alertmanager/rendered:/etc/alertmanager:ro
