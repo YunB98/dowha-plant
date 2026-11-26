@@ -239,6 +239,19 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | `GET /admin/inquiries/{id}` | 전체 정보. 개인정보가 삭제된 문의는 해당 필드가 `null` |
 | `PATCH /admin/inquiries/{id}` | `{ "status": "quoted", "admin_memo": "12/3 견적서 메일 발송" }`. 상태가 바뀌면 `contacted_at`, `completed_at`을 서버가 기록 |
 
+구현: `backend/app/admin_inquiries.py`
+- 목록: `size` 최대 50. 전화는 `010-****-5678`, 이메일은 `do***@example.com`. 메모·요청사항은 상세에서만
+- 상세 조회는 로그에 남긴다 (`inquiry viewed: admin=owner inquiry=12`, 개인정보는 넣지 않는다)
+- 상태 순서는 강제하지 않는다 (사장님이 상황에 맞게 고른다). 서버는 시각만 기록한다
+
+| 상태 변경 | 서버가 하는 일 |
+|---|---|
+| `contacted`·`quoted`·`confirmed`·`completed`로 처음 바뀔 때 | `contacted_at` 기록 (이후 바뀌지 않음) |
+| `completed`·`canceled`가 될 때 | `completed_at` 기록. **개인정보 보관 기간은 이때부터** |
+| `completed`↔`canceled` | `completed_at` 유지 |
+| 끝난 문의를 다시 진행 중으로 | `completed_at`을 지운다 (진행 중인 문의의 연락처가 삭제되지 않게) |
+| 개인정보를 지운 문의를 진행 중으로 | `409` (연락할 방법이 없다). 메모는 수정 가능 |
+
 ### 콘텐츠 (클래스, 사례, 갤러리, 가이드)
 
 모두 같은 패턴이다.

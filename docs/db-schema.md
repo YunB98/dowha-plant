@@ -223,7 +223,7 @@ IP, 기기 정보는 저장하지 않는다. 스캔 수 집계용.
 | `status` | VARCHAR | `received`(접수) / `contacted`(연락함) / `quoted`(견적 보냄) / `confirmed`(확정) / `completed`(완료) / `canceled`(취소) |
 | `organization_name` | VARCHAR(100) | 기관명 |
 | `organization_type` | VARCHAR | `cases.organization_type`과 같은 값 |
-| `contact_name` | VARCHAR(50) | 담당자 이름 — **개인정보** |
+| `contact_name` | VARCHAR(50) | 담당자 이름 — **개인정보**. 개인정보 삭제 후에만 NULL (CHECK, 마이그레이션 0003) |
 | `phone` | VARCHAR(20) | 연락처 — **개인정보** |
 | `email` | VARCHAR(255) | 이메일 (선택) — **개인정보** |
 | `people_count` | INTEGER | 인원 |

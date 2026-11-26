@@ -131,9 +131,10 @@ def _inquiry(**kw: object) -> Inquiry:
 
 def test_inquiry_requires_contact_until_purged(db: Session) -> None:
     _expect_violation(db, _inquiry(phone=None), "ck_inquiries_contact_required")
+    _expect_violation(db, _inquiry(contact_name=None), "ck_inquiries_contact_name_required")
 
-    db.add(_inquiry(phone=None, contact_name="(삭제됨)", pii_purged_at=datetime.now(UTC)))
-    db.flush()  # 개인정보 삭제 후에는 연락처가 없어도 된다
+    db.add(_inquiry(phone=None, contact_name=None, pii_purged_at=datetime.now(UTC)))
+    db.flush()  # 개인정보 삭제 후에는 이름·연락처가 없어도 된다
 
 
 def test_inquiry_enum_checks(db: Session) -> None:

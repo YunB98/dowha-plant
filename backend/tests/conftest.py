@@ -64,3 +64,18 @@ def client(db: Session) -> Iterator["TestClient"]:
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def admin_client(client: "TestClient", db: Session) -> "TestClient":
+    """로그인한 관리자 클라이언트 (https + 같은 사이트 Origin). 로그인 과정은 test_auth.py가 확인한다."""
+    from app.auth import COOKIE_NAME, issue_token
+    from app.models import AdminUser
+
+    user = AdminUser(username="owner", role="owner", password_hash="unused-in-this-test")
+    db.add(user)
+    db.flush()
+    client.base_url = client._merge_url("https://testserver")  # noqa: SLF001  (Secure 쿠키)
+    client.headers["Origin"] = "https://dowha-plant.shop"
+    client.cookies.set(COOKIE_NAME, issue_token(user))
+    return client

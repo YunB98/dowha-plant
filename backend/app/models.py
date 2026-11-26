@@ -233,7 +233,7 @@ class Inquiry(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), server_default="received")
     organization_name: Mapped[str | None] = mapped_column(String(100))
     organization_type: Mapped[str | None] = mapped_column(String(20))
-    contact_name: Mapped[str] = mapped_column(String(50))
+    contact_name: Mapped[str | None] = mapped_column(String(50))  # 개인정보 삭제 후에만 NULL
     phone: Mapped[str | None] = mapped_column(String(20))
     email: Mapped[str | None] = mapped_column(String(255))
     people_count: Mapped[int | None] = mapped_column(Integer)
@@ -268,6 +268,7 @@ class Inquiry(TimestampMixin, Base):
             "phone IS NOT NULL OR email IS NOT NULL OR pii_purged_at IS NOT NULL",
             name="contact_required",
         ),
+        CheckConstraint("contact_name IS NOT NULL OR pii_purged_at IS NOT NULL", name="contact_name_required"),
         Index("ix_inquiries_status_created_at", "status", text("created_at DESC")),
         Index("ix_inquiries_created_at_source", "created_at", "source"),
         Index(
