@@ -10,12 +10,14 @@ on:
     paths:
       - "backend/**"
       - "deploy/**"
+      - "frontend/**"
       - ".github/workflows/deploy.yml"
   push:
     branches: [main]
     paths:
       - "backend/**"
       - "deploy/**"
+      - "frontend/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -185,12 +187,29 @@ jobs:
           echo "상태: $status"
           [ "$status" = "Success" ]
 
+      # 지금은 오류 페이지(404.html, error.html)만 있다. 5단계부터 Next.js 빌드 결과를 올린다.
+      # files/ 아래(소개서 PDF)는 서버가 관리하므로 건드리지 않는다. 아직 --delete는 쓰지 않는다.
+      - name: 정적 사이트 업로드
+        run: |
+          bucket="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/site-bucket --query Parameter.Value --output text)"
+          dist="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/cloudfront-distribution-id --query Parameter.Value --output text)"
+          aws s3 sync frontend/public "s3://${bucket}/" --exclude "files/*"             --cache-control "public, max-age=300" --only-show-errors
+          id="$(aws cloudfront create-invalidation --distribution-id "$dist" --paths "/*"             --query Invalidation.Id --output text)"
+          echo "캐시 무효화: $id"
+          aws cloudfront wait invalidation-completed --distribution-id "$dist" --id "$id"
+
       - name: 헬스 체크 (CloudFront 경유)
         run: |
+          ok=false
           for i in $(seq 1 12); do
             code="$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/api/v1/health" || true)"
             echo "시도 $i: $code"
-            [ "$code" = "200" ] && exit 0
+            if [ "$code" = "200" ]; then ok=true; break; fi
             sleep 10
           done
-          exit 1
+          $ok
+
+          # 없는 주소는 S3 403 → 404 페이지(404 응답)로 바뀌어야 한다 (ADR 0021)
+          code="$(curl -s -o page.html -w '%{http_code}' "$SITE_URL/__deploy-check-missing-page")"
+          echo "없는 페이지: $code"
+          [ "$code" = "404" ] && grep -q '찾으시는 페이지가 없어요' page.html
