@@ -92,6 +92,13 @@ systemctl enable --now dowha-cert-renew.timer
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 docker compose pull --quiet
 docker compose up -d --remove-orphans
+
+# 설정 파일은 bind mount라 내용이 바뀌어도 compose가 컨테이너를 다시 만들지 않는다.
+# (2026-11-26: 요청 수 제한·api 수집·새 경보가 배포 후에도 적용되지 않았다) 매번 검사 후 다시 읽게 한다.
+docker compose exec -T nginx nginx -t < /dev/null
+docker compose exec -T nginx nginx -s reload < /dev/null
+docker compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml < /dev/null
+docker compose kill -s HUP prometheus alertmanager
 docker compose ps
 
 # --- 4. 정기 작업 -----------------------------------------------------------
