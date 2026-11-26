@@ -21,6 +21,18 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
 
+    # 관리자 로그인 토큰 서명 키. 운영에서는 SSM session-secret (deploy.sh → .env → compose).
+    # 바꾸면 발급된 토큰이 모두 무효가 된다 (전체 로그아웃).
+    session_secret: str = ""
+
+    @property
+    def signing_key(self) -> str:
+        if len(self.session_secret) >= 32:
+            return self.session_secret
+        if self.is_prod:
+            raise RuntimeError("SESSION_SECRET이 없거나 너무 짧습니다 (32자 이상)")
+        return "dev-only-session-secret-do-not-use-in-prod"
+
     @property
     def sqlalchemy_url(self) -> str:
         url = self.database_url

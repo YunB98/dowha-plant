@@ -204,7 +204,14 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | 세션 | 로그인 시 서명된 토큰을 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로 발급. 유효기간 14일 |
 | CSRF | 같은 도메인 + `SameSite=Strict` 쿠키 + 변경 요청은 `Origin` 헤더 검사 |
 | 전체 로그아웃 | `admin_users.token_version`을 올리면 기존 토큰이 모두 무효 |
-| 로그인 제한 | IP당 1분 5회 |
+| 로그인 제한 | IP당 1분 5회 (Nginx). 15분에 10회 넘게 실패하면 텔레그램 경보 `AdminLoginFailures` |
+| 비밀번호 | argon2id (메모리 19MiB, 2회). 해시 계산은 한 번에 하나씩 |
+| 계정 만들기 | API 없음. 서버에서 `python -m app.admin_cli create-user` (deploy/README.md) |
+
+구현: `backend/app/auth.py`, ADR 0025.
+- 쿠키 이름 `dowha_admin`, `Path=/api/v1/admin` (관리 API에만 보낸다). 토큰에는 사용자 id와 `token_version`만 들어 있다
+- `Origin` 검사는 로그인·로그아웃을 포함한 모든 변경 요청(GET 외)에 적용한다. `Origin`이 없어도 거부한다
+- 관리 API는 `Depends(current_admin)` 하나로 세션 확인과 `Origin` 검사를 같이 한다
 
 | 요청 | 설명 |
 |---|---|
@@ -341,6 +348,6 @@ CloudFront 뒤에 있으므로 `X-Forwarded-For`에서 실제 손님 IP를 꺼�
 | 대상 | 제한 |
 |---|---|
 | `POST /api/v1/inquiries` | IP당 한 번에 5회, 이후 1분에 1회 (`rate=1r/m burst=4`, 10분에 약 5회 수준) |
-| `POST /api/v1/admin/auth/login` | IP당 1분에 5회 |
+| `POST /api/v1/admin/auth/login` | IP당 한 번에 5회, 이후 12초에 1회 (`rate=5r/m burst=4`). 성공한 로그인도 센다 |
 | `GET /q/*` | IP당 1초에 5회, 순간 10회. 넘으면 `/guides/`로 302 |
 | 그 외 | IP당 1초에 10회 (순간 20회까지 허용) |

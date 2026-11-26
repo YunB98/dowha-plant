@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import errors, inquiries, public, qr
+from app import auth, errors, inquiries, public, qr
 from app.config import get_settings
 from app.db import get_db
 
@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 settings = get_settings()
+settings.signing_key  # 운영에서 SESSION_SECRET이 없으면 여기서 시작을 멈춘다
 
 app = FastAPI(
     title="도화 API",
@@ -33,6 +34,7 @@ errors.register(app)
 app.include_router(public.router)
 app.include_router(inquiries.router)
 app.include_router(qr.router)
+app.include_router(auth.router)
 
 # Prometheus 수집 경로. Nginx는 /api/, /q/, /umami/ 만 넘기므로 밖에서는 닿지 않는다.
 app.mount("/metrics", make_asgi_app())

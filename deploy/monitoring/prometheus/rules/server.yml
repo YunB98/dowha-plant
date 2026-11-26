@@ -49,6 +49,14 @@ groups:
 
   - name: app
     rules:
+      # Nginx가 IP당 1분 5회로 막으므로, 15분에 10회 넘게 틀리면 여러 IP에서 시도하는 것일 수 있다
+      - alert: AdminLoginFailures
+        expr: increase(dowha_admin_logins_total{result="failure"}[15m]) > 10
+        labels:
+          severity: warning
+        annotations:
+          summary: "관리자 로그인 실패 {{ $value | printf \"%.0f\" }}회 (15분). 본인이 아니면 비밀번호를 바꾸세요 (set-password)"
+
       # 문의 알림이 실패하면 사장님이 문의를 놓칠 수 있다
       - alert: InquiryNotificationFailed
         expr: increase(dowha_notifications_failed_total[30m]) > 0

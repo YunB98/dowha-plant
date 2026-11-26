@@ -24,7 +24,7 @@ umask 077
 # 이름으로 직접 읽는다. 서버 역할은 ${PREFIX}/* 아래 값만 읽을 수 있고,
 # get-parameters-by-path는 경로 자체(${PREFIX})에 대한 권한을 따로 요구하기 때문이다.
 KEYS=(origin-verify-secret postgres-password umami-db-password umami-app-secret
-      grafana-admin-password telegram-bot-token telegram-chat-id)
+      grafana-admin-password session-secret telegram-bot-token telegram-chat-id)
 NAMES=()
 for key in "${KEYS[@]}"; do NAMES+=("${PREFIX}/${key}"); done
 
@@ -56,6 +56,7 @@ POSTGRES_PASSWORD='${P[postgres-password]}'
 UMAMI_DB_PASSWORD='${P[umami-db-password]}'
 UMAMI_APP_SECRET='${P[umami-app-secret]}'
 GRAFANA_ADMIN_PASSWORD='${P[grafana-admin-password]}'
+SESSION_SECRET='${P[session-secret]}'
 TELEGRAM_BOT_TOKEN='${P[telegram-bot-token]}'
 TELEGRAM_CHAT_ID='${P[telegram-chat-id]}'
 BACKEND_IMAGE='${BACKEND_IMAGE}'

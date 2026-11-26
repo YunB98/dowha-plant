@@ -12,4 +12,5 @@ NOTIFICATIONS_FAILED = Counter(
 QR_SCANS = Counter(
     "dowha_qr_scans_total", "QR 스캔 수 (guide: 가이드로, fallback: 목록으로, unknown: 없는 코드)", ["result"]
 )
+ADMIN_LOGINS = Counter("dowha_admin_logins_total", "관리자 로그인 시도 수", ["result"])
 QR_SCAN_FAILED = Counter("dowha_qr_scan_record_failed_total", "QR 스캔 기록 실패 수 (리디렉션은 했음)")

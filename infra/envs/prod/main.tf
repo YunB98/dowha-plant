@@ -85,6 +85,7 @@ locals {
     "umami-db-password"      = "PostgreSQL password for the umami user"
     "umami-app-secret"       = "Umami APP_SECRET"
     "grafana-admin-password" = "Grafana admin password"
+    "session-secret"         = "Signing key for admin login cookies (rotate = log out everyone)"
   }
 }
 

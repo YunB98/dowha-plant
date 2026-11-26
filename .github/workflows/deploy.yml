@@ -77,7 +77,7 @@ jobs:
         working-directory: deploy
         run: |
           for k in ORIGIN_DOMAIN ORIGIN_VERIFY_SECRET POSTGRES_PASSWORD UMAMI_DB_PASSWORD \
-                   UMAMI_APP_SECRET GRAFANA_ADMIN_PASSWORD BACKEND_IMAGE \
+                   UMAMI_APP_SECRET GRAFANA_ADMIN_PASSWORD SESSION_SECRET BACKEND_IMAGE \
                    TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do echo "$k=x"; done > ci.env
           docker compose --env-file ci.env config --quiet
           docker compose --env-file ci.env --profile dashboard config --quiet
