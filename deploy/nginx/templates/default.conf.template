@@ -45,8 +45,22 @@ server {
     proxy_set_header X-Forwarded-Proto https;
     proxy_set_header X-Origin-Verify "";
 
-    location /api/ {
+    location = /api/v1/inquiries {
+        limit_req zone=inquiry burst=4 nodelay;
         proxy_pass http://api;
+    }
+
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        proxy_pass http://api;
+    }
+
+    # 제한에 걸리면 API와 같은 오류 형식으로 (CloudFront는 429를 바꾸지 않는다)
+    error_page 429 = @rate_limited;
+    location @rate_limited {
+        default_type application/json;
+        charset utf-8;
+        return 429 '{"error":{"code":"RATE_LIMITED","message":"요청이 너무 많아요. 잠시 후 다시 시도해주세요."}}';
     }
 
     # QR 스캔 → FastAPI가 기록 후 302 (ADR 0013)

@@ -46,3 +46,13 @@ groups:
           severity: warning
         annotations:
           summary: "CPU 사용률 50% 이상 30분 지속 (CPU 크레딧 소진 위험)"
+
+  - name: app
+    rules:
+      # 문의 알림이 실패하면 사장님이 문의를 놓칠 수 있다
+      - alert: InquiryNotificationFailed
+        expr: increase(dowha_notifications_failed_total[30m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "문의 알림(텔레그램) 실패 {{ $value }}건. 관리 화면에서 새 문의를 확인하세요"

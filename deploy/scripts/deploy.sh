@@ -56,6 +56,8 @@ POSTGRES_PASSWORD='${P[postgres-password]}'
 UMAMI_DB_PASSWORD='${P[umami-db-password]}'
 UMAMI_APP_SECRET='${P[umami-app-secret]}'
 GRAFANA_ADMIN_PASSWORD='${P[grafana-admin-password]}'
+TELEGRAM_BOT_TOKEN='${P[telegram-bot-token]}'
+TELEGRAM_CHAT_ID='${P[telegram-chat-id]}'
 BACKEND_IMAGE='${BACKEND_IMAGE}'
 EOF
 

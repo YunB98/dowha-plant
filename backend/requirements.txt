@@ -4,3 +4,5 @@ pydantic-settings==2.10.1
 sqlalchemy==2.0.41
 psycopg[binary]==3.2.9
 alembic==1.16.2
+httpx==0.28.1
+prometheus-client==0.22.1

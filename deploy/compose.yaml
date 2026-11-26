@@ -40,7 +40,10 @@ services:
     restart: unless-stopped
     mem_limit: 160m
     environment:
+      APP_ENV: prod
       DATABASE_URL: postgresql://dowha:${POSTGRES_PASSWORD}@postgres:5432/dowha
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     depends_on:
       postgres:
         condition: service_healthy

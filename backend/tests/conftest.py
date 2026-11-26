@@ -49,3 +49,18 @@ def db() -> Iterator[Session]:
         finally:
             session.close()
             trans.rollback()
+
+
+@pytest.fixture
+def client(db: Session) -> Iterator["TestClient"]:
+    """API가 테스트와 같은 트랜잭션을 쓰게 한다. 엔드포인트의 commit은 savepoint까지만 반영되고 끝나면 되돌린다."""
+    from fastapi.testclient import TestClient
+
+    from app.db import get_db
+    from app.main import app
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()

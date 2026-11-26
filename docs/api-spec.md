@@ -162,7 +162,9 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 { "id": 105, "type": "outreach", "status": "received", "created_at": "..." }
 ```
 
-처리 후: 사장님 텔레그램으로 알림을 보낸다. 알림이 실패해도 문의 저장은 유지하고, 실패는 로그와 지표에 기록한다.
+처리 후: 사장님 텔레그램으로 알림을 보낸다 (응답 후 백그라운드). 알림에는 기관명·인원·일정·유입 경로만 넣고 **이름·연락처는 넣지 않는다** (텔레그램 서버에 남기 때문). 알림이 실패해도 문의 저장은 유지하고, 실패는 로그와 지표(`dowha_notifications_failed_total`)에 기록하며 Prometheus 규칙이 운영자에게 알린다.
+
+연락처는 `010-1234-5678` 형식으로 맞춰 저장한다. 요청 수 제한에 걸리면 Nginx가 같은 오류 형식으로 `429 RATE_LIMITED`를 응답한다.
 
 ### QR 연결
 
@@ -326,7 +328,7 @@ CloudFront 뒤에 있으므로 `X-Forwarded-For`에서 실제 손님 IP를 꺼�
 
 | 대상 | 제한 |
 |---|---|
-| `POST /api/v1/inquiries` | IP당 10분에 5회 |
+| `POST /api/v1/inquiries` | IP당 한 번에 5회, 이후 1분에 1회 (`rate=1r/m burst=4`, 10분에 약 5회 수준) |
 | `POST /api/v1/admin/auth/login` | IP당 1분에 5회 |
 | `GET /q/*` | IP당 1초에 5회 |
 | 그 외 | IP당 1초에 10회 (순간 20회까지 허용) |
