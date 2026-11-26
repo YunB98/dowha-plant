@@ -29,18 +29,24 @@ KEYS=(origin-verify-secret postgres-password umami-db-password umami-app-secret
 NAMES=()
 for key in "${KEYS[@]}"; do NAMES+=("${PREFIX}/${key}"); done
 
-# 먼저 값 없이 확인한다. 권한 오류면 AWS CLI 오류가 그대로 보이고 여기서 멈춘다.
-missing="$(aws ssm get-parameters --names "${NAMES[@]}" --query 'InvalidParameters' --output text)"
-if [ -n "$missing" ]; then
-  echo "SSM 파라미터가 없습니다 (deploy/README.md 참고): $missing" >&2
-  exit 1
-fi
-
+# get-parameters는 한 번에 10개까지만 받는다. 11개가 되자 배포가 멈춘 적이 있어(2026-11-26) 10개씩 나눠 읽는다.
+BATCH=10
 declare -A P
-while IFS=$'\t' read -r name value; do
-  P["${name#"$PREFIX"/}"]="$value"
-done < <(aws ssm get-parameters --names "${NAMES[@]}" --with-decryption \
-          --query 'Parameters[].[Name,Value]' --output text)
+for ((i = 0; i < ${#NAMES[@]}; i += BATCH)); do
+  batch=("${NAMES[@]:i:BATCH}")
+
+  # 먼저 값 없이 확인한다. 권한 오류면 AWS CLI 오류가 그대로 보이고 여기서 멈춘다.
+  missing="$(aws ssm get-parameters --names "${batch[@]}" --query 'InvalidParameters' --output text)"
+  if [ -n "$missing" ]; then
+    echo "SSM 파라미터가 없습니다 (deploy/README.md 참고): $missing" >&2
+    exit 1
+  fi
+
+  while IFS=$'\t' read -r name value; do
+    P["${name#"$PREFIX"/}"]="$value"
+  done < <(aws ssm get-parameters --names "${batch[@]}" --with-decryption \
+            --query 'Parameters[].[Name,Value]' --output text)
+done
 
 for key in "${KEYS[@]}"; do
   if [ -z "${P[$key]:-}" ]; then
