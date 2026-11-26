@@ -24,7 +24,8 @@ umask 077
 # 이름으로 직접 읽는다. 서버 역할은 ${PREFIX}/* 아래 값만 읽을 수 있고,
 # get-parameters-by-path는 경로 자체(${PREFIX})에 대한 권한을 따로 요구하기 때문이다.
 KEYS=(origin-verify-secret postgres-password umami-db-password umami-app-secret
-      grafana-admin-password telegram-bot-token telegram-chat-id)
+      grafana-admin-password session-secret telegram-bot-token telegram-chat-id
+      deploy/site-bucket deploy/media-bucket deploy/cloudfront-distribution-id)
 NAMES=()
 for key in "${KEYS[@]}"; do NAMES+=("${PREFIX}/${key}"); done
 
@@ -56,6 +57,12 @@ POSTGRES_PASSWORD='${P[postgres-password]}'
 UMAMI_DB_PASSWORD='${P[umami-db-password]}'
 UMAMI_APP_SECRET='${P[umami-app-secret]}'
 GRAFANA_ADMIN_PASSWORD='${P[grafana-admin-password]}'
+SESSION_SECRET='${P[session-secret]}'
+SITE_BUCKET='${P[deploy/site-bucket]}'
+MEDIA_BUCKET='${P[deploy/media-bucket]}'
+CLOUDFRONT_DISTRIBUTION_ID='${P[deploy/cloudfront-distribution-id]}'
+TELEGRAM_BOT_TOKEN='${P[telegram-bot-token]}'
+TELEGRAM_CHAT_ID='${P[telegram-chat-id]}'
 BACKEND_IMAGE='${BACKEND_IMAGE}'
 EOF
 
@@ -80,3 +87,10 @@ aws ecr get-login-password --region "$REGION" | docker login --username AWS --pa
 docker compose pull --quiet
 docker compose up -d --remove-orphans
 docker compose ps
+
+# --- 4. 정기 작업 -----------------------------------------------------------
+# 처리 끝난 문의의 개인정보 삭제 (매일 03:30 KST, backend/app/purge.py). api 컨테이너가 뜬 뒤에 켠다
+install -m 644 systemd/dowha-pii-purge.service /etc/systemd/system/
+install -m 644 systemd/dowha-pii-purge.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now dowha-pii-purge.timer

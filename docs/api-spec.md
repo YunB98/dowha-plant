@@ -39,12 +39,28 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 
 ---
 
+## 0. 시스템
+
+| 경로 | 용도 | 응답 |
+|---|---|---|
+| `GET /api/v1/health` | 프로세스 확인 (컨테이너 헬스 체크) | `200 {"status":"ok"}` |
+| `GET /api/v1/health/ready` | DB 연결까지 확인 (배포 확인, UptimeRobot) | `200 {"status":"ok","database":"ok"}`, DB 장애 시 `503` |
+
+---
+
 ## 1. 손님용 API (인증 없음)
+
+구현: `backend/app/public.py`. 공통으로
+- 비공개 항목(`hidden`, `draft`, `is_published=false`)은 목록에서 빠지고, 상세는 `404`로 응답한다 (있는지도 알려 주지 않는다)
+- `image_url`은 `https://dowha-plant.shop/` + `s3_key` (media 버킷 `images/` → CloudFront `/images/*`). 주소 앞부분은 환경 변수 `PUBLIC_BASE_URL`로 바꿀 수 있다
+- `thumbnail_url`은 `sort_order`가 가장 작은 사진, 사진이 없으면 `null`
+- 사진은 항목마다 따로 읽지 않고 한 번에 읽는다 (목록 크기와 상관없이 쿼리 수가 같다. 테스트로 확인)
 
 ### 가게 정보
 
 #### `GET /api/v1/store`
-화면에 표시할 공개 설정값만 반환한다.
+화면에 표시할 공개 설정값만 반환한다. 아직 채우지 않은 값은 `null`이다 (화면에서 그 항목을 숨긴다).
+`privacy.*` 같은 내부 설정은 내보내지 않는다. `brochure_url`은 `outreach.brochure_s3_key`가 있을 때만 만든다.
 
 ```json
 {
@@ -58,7 +74,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 클래스
 
 #### `GET /api/v1/workshops`
-`open`, `closed` 클래스를 반환한다 (`hidden` 제외).
+`open`, `closed` 클래스를 `sort_order` 순으로 반환한다 (`hidden` 제외). `closed`는 "지금은 모집하지 않음"으로 보여 준다.
 
 ```json
 [
@@ -82,7 +98,8 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 진행 사례
 
 #### `GET /api/v1/cases?organization_type=school&page=1`
-공개된 사례를 진행 날짜 최신순으로 반환한다.
+공개된 사례를 진행 날짜 최신순으로 반환한다. `size`는 최대 50, 잘못된 `organization_type`·`page`·`size`는 `422`.
+연결된 클래스가 숨김(`hidden`)이면 `workshop`은 `null`이다.
 
 ```json
 {
@@ -117,7 +134,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 식물 가이드
 
 #### `GET /api/v1/guides`
-공개된 가이드 목록 (`slug`, `name`, `difficulty`, `summary`, `thumbnail_url`).
+공개된 가이드 목록 (`slug`, `name`, `difficulty`, `summary`, `thumbnail_url`), 이름순.
 
 #### `GET /api/v1/guides/{slug}`
 가이드 전체 내용과 사진. 비공개(`draft`)는 404.
@@ -153,7 +170,9 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 { "id": 105, "type": "outreach", "status": "received", "created_at": "..." }
 ```
 
-처리 후: 사장님 텔레그램으로 알림을 보낸다. 알림이 실패해도 문의 저장은 유지하고, 실패는 로그와 지표에 기록한다.
+처리 후: 사장님 텔레그램으로 알림을 보낸다 (응답 후 백그라운드). 알림에는 기관명·인원·일정·유입 경로만 넣고 **이름·연락처는 넣지 않는다** (텔레그램 서버에 남기 때문). 알림이 실패해도 문의 저장은 유지하고, 실패는 로그와 지표(`dowha_notifications_failed_total`)에 기록하며 Prometheus 규칙이 운영자에게 알린다.
+
+연락처는 `010-1234-5678` 형식으로 맞춰 저장한다. 요청 수 제한에 걸리면 Nginx가 같은 오류 형식으로 `429 RATE_LIMITED`를 응답한다.
 
 ### QR 연결
 
@@ -162,13 +181,17 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 
 | 상황 | 이동할 곳 | 스캔 기록 |
 |---|---|---|
-| 활성 코드 + 공개 가이드 연결 | `/guides/{slug}?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
-| 비활성 코드, 가이드 없음, 비공개 가이드 | `/guides?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
-| 없는 코드 | `/guides` | X |
+| 활성 코드 + 공개 가이드 연결 | `/guides/{slug}/?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
+| 비활성 코드, 가이드 없음, 비공개 가이드 | `/guides/?utm_source=qr&utm_medium=card&utm_campaign={code}` | O |
+| 없는 코드 | `/guides/` | X |
 
 - 대소문자를 구분하지 않는다 (`/q/ab12cd` = `/q/AB12CD`).
 - 응답에 `Cache-Control: no-store` (CloudFront가 캐시하면 스캔이 기록되지 않는다).
-- 스캔 기록에 실패해도 리디렉션은 반드시 한다.
+- 스캔 기록에 실패해도(DB 장애 포함) 리디렉션은 반드시 한다.
+- `Location`은 **상대 주소**다. 서버는 `origin.dowha-plant.shop` 이름으로 요청을 받으므로 절대 주소를 만들면 손님이 오리진으로 간다 (Nginx도 `absolute_redirect off`).
+- 사이트가 `trailingSlash: true`로 빌드되므로 끝에 `/`를 붙인다.
+- 요청 수 제한(IP당 초당 5회, 순간 10회)에 걸리면 Nginx가 JSON 대신 `/guides/`로 302 한다.
+- 지표: `dowha_qr_scans_total{result}` (`guide`, `fallback`, `unknown`), 기록 실패 `dowha_qr_scan_record_failed_total`
 
 ---
 
@@ -181,7 +204,14 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | 세션 | 로그인 시 서명된 토큰을 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로 발급. 유효기간 14일 |
 | CSRF | 같은 도메인 + `SameSite=Strict` 쿠키 + 변경 요청은 `Origin` 헤더 검사 |
 | 전체 로그아웃 | `admin_users.token_version`을 올리면 기존 토큰이 모두 무효 |
-| 로그인 제한 | IP당 1분 5회 |
+| 로그인 제한 | IP당 1분 5회 (Nginx). 15분에 10회 넘게 실패하면 텔레그램 경보 `AdminLoginFailures` |
+| 비밀번호 | argon2id (메모리 19MiB, 2회). 해시 계산은 한 번에 하나씩 |
+| 계정 만들기 | API 없음. 서버에서 `python -m app.admin_cli create-user` (deploy/README.md) |
+
+구현: `backend/app/auth.py`, ADR 0025.
+- 쿠키 이름 `dowha_admin`, `Path=/api/v1/admin` (관리 API에만 보낸다). 토큰에는 사용자 id와 `token_version`만 들어 있다
+- `Origin` 검사는 로그인·로그아웃을 포함한 모든 변경 요청(GET 외)에 적용한다. `Origin`이 없어도 거부한다
+- 관리 API는 `Depends(current_admin)` 하나로 세션 확인과 `Origin` 검사를 같이 한다
 
 | 요청 | 설명 |
 |---|---|
@@ -200,6 +230,9 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
   "content": { "cases": 6, "guides_published": 10, "showcase": 12 }
 }
 ```
+- `this_month`: 한국 시간 1일 0시부터 (UTC+9 고정, 한국은 서머타임이 없다)
+- `content`: 모두 **공개된 것만** 센다 (손님이 보는 숫자)
+- 구현: `backend/app/admin_summary.py`
 
 ### 문의
 
@@ -208,6 +241,19 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | `GET /admin/inquiries?status=&type=&page=` | 최신순 목록. 연락처 가운데를 가린다 (`010-****-1234`) |
 | `GET /admin/inquiries/{id}` | 전체 정보. 개인정보가 삭제된 문의는 해당 필드가 `null` |
 | `PATCH /admin/inquiries/{id}` | `{ "status": "quoted", "admin_memo": "12/3 견적서 메일 발송" }`. 상태가 바뀌면 `contacted_at`, `completed_at`을 서버가 기록 |
+
+구현: `backend/app/admin_inquiries.py`
+- 목록: `size` 최대 50. 전화는 `010-****-5678`, 이메일은 `do***@example.com`. 메모·요청사항은 상세에서만
+- 상세 조회는 로그에 남긴다 (`inquiry viewed: admin=owner inquiry=12`, 개인정보는 넣지 않는다)
+- 상태 순서는 강제하지 않는다 (사장님이 상황에 맞게 고른다). 서버는 시각만 기록한다
+
+| 상태 변경 | 서버가 하는 일 |
+|---|---|
+| `contacted`·`quoted`·`confirmed`·`completed`로 처음 바뀔 때 | `contacted_at` 기록 (이후 바뀌지 않음) |
+| `completed`·`canceled`가 될 때 | `completed_at` 기록. **개인정보 보관 기간은 이때부터** |
+| `completed`↔`canceled` | `completed_at` 유지 |
+| 끝난 문의를 다시 진행 중으로 | `completed_at`을 지운다 (진행 중인 문의의 연락처가 삭제되지 않게) |
+| 개인정보를 지운 문의를 진행 중으로 | `409` (연락할 방법이 없다). 메모는 수정 가능 |
 
 ### 콘텐츠 (클래스, 사례, 갤러리, 가이드)
 
@@ -221,10 +267,19 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | 수정 | `PATCH .../{id}` | 〃 | 〃 | 〃 |
 | 삭제 | `DELETE .../{id}` | 〃 | 〃 | 〃 |
 
+구현: `backend/app/admin_content.py` (네 종류에 같은 함수를 붙인다)
+- 목록은 `{ id, title, status, thumbnail_url, image_count, updated_at }`. 상세·등록·수정 응답은 전체 필드와 `images`
+- **새로 만들면 비공개가 기본**이다 (`hidden`, `draft`, `is_published: false`). 사진을 다 올린 뒤 공개한다
+- `PATCH`는 보낸 필드만 바꾼다. 비울 수 있는 필드(`participant_count`, `audience`, `workshop_id`, `store_url`, `scientific_name`)만 `null` 허용
+- 범위 검사(최소 인원 ≤ 최대 인원, 최소 시간 ≤ 최대 시간)는 수정 후 값으로 다시 한다
+- 작품 `store_url`은 스마트스토어 주소만 (설정의 링크 검사와 같다)
+- 삭제하면 사진 파일도 S3에서 지운다. 연결된 사례·문의·QR은 연결만 끊긴다 (`SET NULL`)
+- 공개 중인 내용이 바뀌면 사이트 재빌드를 요청한다 (ADR 0015, `app/site_rebuild.py`. 5단계에서 GitHub 요청을 붙인다)
+
 추가 규칙:
 - `PATCH /admin/workshops/{id}`의 `status`로 시즌 클래스를 열고 닫는다.
 - `PATCH /admin/cases/{id}`, `/admin/showcase/{id}`의 `is_published`로 공개 여부를 바꾼다.
-- 가이드: `status`를 `published`로 처음 바꿀 때 `published_at`을 기록한다. **공개된 가이드의 `slug`는 바꿀 수 없다** (409).
+- 가이드: `status`를 `published`로 처음 바꿀 때 `published_at`을 기록한다. **한 번이라도 공개된 가이드의 `slug`는 바꿀 수 없다** (409, 비공개로 돌려도). 같은 slug도 409.
 - 가이드를 삭제하면 연결된 QR 코드는 `plant_guide_id`가 NULL이 되고, 스캔하면 가이드 목록으로 간다.
 
 ### 사진 업로드
@@ -243,7 +298,7 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 ```
 | 용도 | 형식 | 크기 |
 |---|---|---|
-| `image` | `image/jpeg`, `image/png`, `image/webp`, `image/heic` | 10MB 이하 |
+| `image` | `image/jpeg`, `image/png`, `image/webp` | 10MB 이하 |
 | `brochure` | `application/pdf` | 20MB 이하 |
 
 응답:
@@ -257,15 +312,31 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 ```
 `uploads/tmp/`에 올라온 파일은 연결되지 않으면 S3 수명 주기 규칙으로 1일 후 자동 삭제한다.
 
+구현: `backend/app/admin_uploads.py`, `backend/app/storage.py` (ADR 0026)
+- **HEIC는 받지 않는다.** 크롬 등 대부분 브라우저가 표시하지 못한다. 아이폰은 사진을 올릴 때 JPEG로 바꿔 준다
+- 큰 사진은 관리 화면(브라우저)에서 줄여서 올린다 (예: 긴 변 2000px WebP). 서버에서 줄이면 api 메모리 한도를 넘을 수 있다
+- 업로드 정책이 key 하나, `Content-Type`, 크기를 강제한다 (실제 S3에서 다른 형식·key·크기가 거부되는 것을 확인했다)
+- 버킷 설정이 없으면(로컬) 업로드 API는 `503 SERVICE_UNAVAILABLE`
+
 #### 사진 연결·정렬·삭제
 `{대상}`은 `workshops`, `cases`, `showcase`, `guides` 중 하나.
 
 | 요청 | 본문 | 설명 |
 |---|---|---|
-| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 `images/{대상}/{id}/`로 옮기고 연결 (CloudFront `/images/*`로만 공개, ADR 0021) |
+| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 확인한 뒤 `images/{대상}/{id}/`로 옮기고 연결 (CloudFront `/images/*`로만 공개, ADR 0021). 항목당 20장 |
 | `PUT /admin/{대상}/{id}/images/order` | `{ "image_ids": [7, 3, 5] }` | 첫 번째가 대표 사진 |
 | `PATCH /admin/images/{image_id}` | `{ "alt_text": "..." }` | 설명 수정 |
 | `DELETE /admin/images/{image_id}` | | DB와 S3에서 삭제 |
+
+사진 연결 전에 서버가 S3에서 직접 확인한다. 하나라도 맞지 않으면 `422`, 파일은 tmp에 남아 1일 뒤 지워진다.
+| 확인 | 막는 것 |
+|---|---|
+| `s3_key`가 `uploads/tmp/{32자리}.{jpg,png,webp}` 형식 | 이미 공개된 다른 사진이나 `../` 경로 지정 |
+| 파일이 있다, 크기 10MB 이하, `Content-Type`이 확장자와 맞다 | 올리지 않은 key, 정책 우회 |
+| 앞 16바이트가 JPEG/PNG/WebP 서명 | 이름만 사진인 HTML·스크립트 |
+
+순서는 "S3 복사 → DB 저장 → tmp 삭제". DB 저장이 실패하면 복사본을 지우고 `503`.
+사진 이름은 매번 새로 만들어(uuid) CloudFront 캐시를 1년(`immutable`) 둔다. 사진 파일 삭제가 실패해도 요청은 성공(DB가 기준), 지표 `dowha_storage_errors_total`로 남는다.
 
 ### QR 코드
 
@@ -278,15 +349,37 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 
 QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 비활성화만 한다.
 
+구현: `backend/app/admin_qr.py`
+- 코드: 헷갈리는 문자(`0 O 1 I L`)를 뺀 31글자 중 6자리 (약 8억 가지), 겹치면 다시 뽑는다
+- 응답: `code`, `url`(`https://dowha-plant.shop/q/{code}`), `label`, `is_active`, `plant_guide`(`id`, `slug`, `name`, `status`), `scans_total`, `scans_last_30_days`
+- `PATCH`는 보낸 필드만 바꾼다. `"plant_guide_id": null`은 연결 해제 (스캔하면 가이드 목록으로). 코드 자체는 바꿀 수 없다
+- 비공개(`draft`) 가이드에도 연결할 수 있다. 공개 전에 카드를 먼저 인쇄할 수 있게
+- 이미지: 오류 정정 M, 여백 4칸, `size`는 칸 하나의 픽셀 수(1~40, 기본 10 → 약 370px). 테스트에서 실제로 디코딩해 주소를 확인한다
+
 ### 설정
 
 | 요청 | 설명 |
 |---|---|
 | `GET /admin/settings` | 사장님이 바꿀 수 있는 설정 (연락처, 외부 링크, 주소, 영업시간, 출강 지역, 소개서) |
 | `PATCH /admin/settings` | `{ "store.hours": "..." }`처럼 바꿀 키만 보낸다. 키별 형식 검증 |
-| `PUT /admin/settings/brochure` | `{ "s3_key": "uploads/tmp/....pdf" }` → `files/brochure.pdf`로 옮기고 CloudFront 캐시를 무효화 |
+| `PUT /admin/settings/brochure` | `{ "s3_key": "uploads/tmp/....pdf" }` → PDF인지 확인(`%PDF-`), site 버킷 `files/brochure.pdf`로 옮기고 CloudFront 캐시를 무효화. 응답 `{ "brochure_url": "..." }` |
 
 `privacy.retention_months` 같은 운영 설정은 운영자(SQLAdmin)만 바꾼다.
+
+구현: `backend/app/admin_settings.py`. 키는 손님용 `/store`와 같은 목록 하나로 관리한다.
+- 응답은 `{ "contact.phone": "010-1234-5678", ..., "outreach.brochure_url": "..." }` (`brochure_url`은 읽기 전용)
+- `null`이나 빈 문자열은 값 삭제 (손님 화면에서 그 항목을 숨긴다). 알 수 없는 키는 `422`
+
+| 키 | 검증 |
+|---|---|
+| `contact.phone` | 문의 접수와 같은 형식으로 맞춘다 (`01012345678` → `010-1234-5678`) |
+| `contact.instagram` | 계정 이름만 (`@`는 떼어 낸다) |
+| `contact.kakao_url` | `https://pf.kakao.com`, `open.kakao.com` |
+| `links.smartstore_url` | `https://smartstore.naver.com` (하위 도메인 포함) |
+| `links.naver_place_url` | `https://naver.me`, `map.naver.com`, `place.naver.com` |
+| `store.address`, `store.hours`, `outreach.service_area` | 200자 이하 |
+
+외부 링크를 정해진 주소로 제한하는 이유: 관리자 로그인이 털려도 손님을 피싱 사이트로 보내기 어렵게.
 
 ---
 
@@ -308,6 +401,10 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `dowha_inquiries_created_total{type, source}` | 문의 접수 수 |
 | `dowha_qr_scans_total{result}` | QR 스캔 수 (`guide`, `fallback`, `unknown`) |
 | `dowha_notifications_failed_total{channel}` | 알림 실패 수 (알림 대상) |
+| `dowha_inquiries_pii_overdue` | 보관 기간 + 2일이 지났는데 개인정보가 남은 문의 수. 0이어야 한다 (경보 `PiiPurgeOverdue`) |
+| `dowha_admin_logins_total{result}` | 관리자 로그인 시도 (경보 `AdminLoginFailures`) |
+| `dowha_uploads_rejected_total{reason}`, `dowha_storage_errors_total{operation}` | 업로드 거부, S3·CloudFront 실패 |
+| `dowha_site_rebuild_requests_total` | 공개 콘텐츠 변경으로 사이트 재빌드를 요청한 수 |
 
 월별 추이 같은 장기 집계는 Grafana에서 PostgreSQL을 직접 조회한다.
 
@@ -317,7 +414,7 @@ CloudFront 뒤에 있으므로 `X-Forwarded-For`에서 실제 손님 IP를 꺼�
 
 | 대상 | 제한 |
 |---|---|
-| `POST /api/v1/inquiries` | IP당 10분에 5회 |
-| `POST /api/v1/admin/auth/login` | IP당 1분에 5회 |
-| `GET /q/*` | IP당 1초에 5회 |
+| `POST /api/v1/inquiries` | IP당 한 번에 5회, 이후 1분에 1회 (`rate=1r/m burst=4`, 10분에 약 5회 수준) |
+| `POST /api/v1/admin/auth/login` | IP당 한 번에 5회, 이후 12초에 1회 (`rate=5r/m burst=4`). 성공한 로그인도 센다 |
+| `GET /q/*` | IP당 1초에 5회, 순간 10회. 넘으면 `/guides/`로 302 |
 | 그 외 | IP당 1초에 10회 (순간 20회까지 허용) |

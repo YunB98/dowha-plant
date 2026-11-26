@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>잠시 점검 중이에요 · 식물가게 도화</title>
+<!-- CloudFront 오류 페이지 (서버 502~504, ADR 0021). 서버가 멈춰도 S3에서 나가므로 외부 파일 없이 이 파일만으로 보여야 한다.
+     원래 요청 주소에서 그대로 응답되므로, QR(/q/...)로 들어온 손님에게는 가이드 안내를 따로 보여준다 (ADR 0013). -->
+<style>
+  :root { --bg:#f6f4ee; --card:#fffdf8; --ink:#2f3a2f; --muted:#6b7464; --leaf:#4f7a4a; --line:#e4e0d4; --note:#eef3ea; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1f1a; --card:#232922; --ink:#e8ebe4; --muted:#a3ab9c; --leaf:#8fbf86; --line:#343b32; --note:#2a3428; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px;
+         background:var(--bg); color:var(--ink);
+         font:16px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  main { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line);
+         border-radius:20px; padding:36px 28px; text-align:center; }
+  .leaf { width:56px; height:56px; margin:0 auto 18px; color:var(--leaf); }
+  h1 { margin:0 0 10px; font-size:22px; line-height:1.4; }
+  p { margin:0 0 24px; color:var(--muted); }
+  .qr { display:none; margin:0 0 20px; padding:14px 16px; border-radius:12px; background:var(--note);
+        color:var(--ink); font-size:15px; text-align:left; }
+  .qr.show { display:block; }
+  nav { display:grid; gap:10px; }
+  a, button { display:block; width:100%; padding:13px 16px; border-radius:12px; text-decoration:none;
+              font:inherit; font-weight:600; cursor:pointer; }
+  .primary { background:var(--leaf); color:#fff; border:0; }
+  .secondary { background:transparent; border:1px solid var(--line); color:var(--ink); }
+  a:focus-visible, button:focus-visible { outline:3px solid var(--leaf); outline-offset:2px; }
+  footer { margin-top:22px; font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <svg class="leaf" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+    <path d="M32 56V30"/><path d="M32 34c0-12 8-20 20-20 0 12-8 20-20 20Z"/><path d="M32 42c0-9-6-15-15-15 0 9 6 15 15 15Z"/>
+  </svg>
+  <h1>잠시 점검 중이에요</h1>
+  <p>일시적으로 연결이 원활하지 않아요.<br>잠시 후 다시 시도해 주세요.</p>
+  <div class="qr" id="qr">
+    QR 카드를 스캔하셨나요? 식물 관리 가이드는 지금도 볼 수 있어요.
+    목록에서 키우시는 식물을 찾아 주세요.
+  </div>
+  <nav>
+    <a class="primary" id="guides" href="/guides/">식물 관리 가이드 보기</a>
+    <button class="secondary" type="button" onclick="location.reload()">다시 시도</button>
+    <a class="secondary" href="/">도화 홈으로</a>
+  </nav>
+  <footer>식물가게 도화 · 전주</footer>
+</main>
+<script>
+  // QR 간접 주소(/q/{code})로 들어왔으면 가이드 안내를 먼저 보여준다
+  if (location.pathname.indexOf("/q/") === 0) {
+    document.getElementById("qr").classList.add("show");
+  }
+</script>
+</body>
+</html>

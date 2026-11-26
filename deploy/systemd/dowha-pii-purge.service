@@ -1,0 +1,10 @@
+[Unit]
+Description=Purge personal data of closed inquiries past retention (app.purge)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dowha
+# -T: 터미널 없이 실행. 결과는 journalctl -u dowha-pii-purge 로 본다
+ExecStart=/usr/bin/docker compose exec -T api python -m app.purge

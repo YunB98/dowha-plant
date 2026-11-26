@@ -40,7 +40,16 @@ services:
     restart: unless-stopped
     mem_limit: 160m
     environment:
+      APP_ENV: prod
       DATABASE_URL: postgresql://dowha:${POSTGRES_PASSWORD}@postgres:5432/dowha
+      SESSION_SECRET: ${SESSION_SECRET}
+      # 사진·소개서 업로드. AWS 자격 증명은 EC2 인스턴스 역할(IMDSv2, hop limit 2)에서 받는다
+      AWS_REGION: ap-northeast-2
+      SITE_BUCKET: ${SITE_BUCKET}
+      MEDIA_BUCKET: ${MEDIA_BUCKET}
+      CLOUDFRONT_DISTRIBUTION_ID: ${CLOUDFRONT_DISTRIBUTION_ID}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     depends_on:
       postgres:
         condition: service_healthy

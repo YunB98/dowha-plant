@@ -18,3 +18,5 @@ Dockerfile  text eol=lf
 *.tmpl text eol=lf
 *.py text eol=lf
 *.txt text eol=lf
+*.ini text eol=lf
+*.mako text eol=lf
