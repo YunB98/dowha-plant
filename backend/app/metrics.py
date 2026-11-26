@@ -14,3 +14,6 @@ QR_SCANS = Counter(
 )
 ADMIN_LOGINS = Counter("dowha_admin_logins_total", "관리자 로그인 시도 수", ["result"])
 QR_SCAN_FAILED = Counter("dowha_qr_scan_record_failed_total", "QR 스캔 기록 실패 수 (리디렉션은 했음)")
+SITE_REBUILD_REQUESTS = Counter("dowha_site_rebuild_requests_total", "공개 콘텐츠 변경으로 사이트 재빌드를 요청한 수")
+UPLOADS_REJECTED = Counter("dowha_uploads_rejected_total", "올라온 파일을 연결하지 않고 거부한 수", ["reason"])
+STORAGE_ERRORS = Counter("dowha_storage_errors_total", "S3·CloudFront 요청 실패 수", ["operation"])

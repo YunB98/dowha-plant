@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
 
+    # 사진(media 버킷 images/)과 소개서(site 버킷 files/). 비어 있으면 업로드 API가 503 (로컬, 테스트)
+    aws_region: str = "ap-northeast-2"
+    media_bucket: str = ""
+    site_bucket: str = ""
+    cloudfront_distribution_id: str = ""
+
     # 관리자 로그인 토큰 서명 키. 운영에서는 SSM session-secret (deploy.sh → .env → compose).
     # 바꾸면 발급된 토큰이 모두 무효가 된다 (전체 로그아웃).
     session_secret: str = ""

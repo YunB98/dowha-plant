@@ -13,3 +13,5 @@ argon2-cffi==25.1.0
 argon2-cffi-bindings==26.2.0
 itsdangerous==2.2.0
 segno==1.6.6
+# AWS 서명·자격 증명만 쓴다. boto3는 메모리를 약 45MB 더 쓴다 (ADR 0026)
+botocore==1.39.4

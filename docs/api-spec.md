@@ -267,10 +267,19 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 | 수정 | `PATCH .../{id}` | 〃 | 〃 | 〃 |
 | 삭제 | `DELETE .../{id}` | 〃 | 〃 | 〃 |
 
+구현: `backend/app/admin_content.py` (네 종류에 같은 함수를 붙인다)
+- 목록은 `{ id, title, status, thumbnail_url, image_count, updated_at }`. 상세·등록·수정 응답은 전체 필드와 `images`
+- **새로 만들면 비공개가 기본**이다 (`hidden`, `draft`, `is_published: false`). 사진을 다 올린 뒤 공개한다
+- `PATCH`는 보낸 필드만 바꾼다. 비울 수 있는 필드(`participant_count`, `audience`, `workshop_id`, `store_url`, `scientific_name`)만 `null` 허용
+- 범위 검사(최소 인원 ≤ 최대 인원, 최소 시간 ≤ 최대 시간)는 수정 후 값으로 다시 한다
+- 작품 `store_url`은 스마트스토어 주소만 (설정의 링크 검사와 같다)
+- 삭제하면 사진 파일도 S3에서 지운다. 연결된 사례·문의·QR은 연결만 끊긴다 (`SET NULL`)
+- 공개 중인 내용이 바뀌면 사이트 재빌드를 요청한다 (ADR 0015, `app/site_rebuild.py`. 5단계에서 GitHub 요청을 붙인다)
+
 추가 규칙:
 - `PATCH /admin/workshops/{id}`의 `status`로 시즌 클래스를 열고 닫는다.
 - `PATCH /admin/cases/{id}`, `/admin/showcase/{id}`의 `is_published`로 공개 여부를 바꾼다.
-- 가이드: `status`를 `published`로 처음 바꿀 때 `published_at`을 기록한다. **공개된 가이드의 `slug`는 바꿀 수 없다** (409).
+- 가이드: `status`를 `published`로 처음 바꿀 때 `published_at`을 기록한다. **한 번이라도 공개된 가이드의 `slug`는 바꿀 수 없다** (409, 비공개로 돌려도). 같은 slug도 409.
 - 가이드를 삭제하면 연결된 QR 코드는 `plant_guide_id`가 NULL이 되고, 스캔하면 가이드 목록으로 간다.
 
 ### 사진 업로드
@@ -289,7 +298,7 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 ```
 | 용도 | 형식 | 크기 |
 |---|---|---|
-| `image` | `image/jpeg`, `image/png`, `image/webp`, `image/heic` | 10MB 이하 |
+| `image` | `image/jpeg`, `image/png`, `image/webp` | 10MB 이하 |
 | `brochure` | `application/pdf` | 20MB 이하 |
 
 응답:
@@ -303,15 +312,31 @@ CloudFront `/q/*` → EC2. JSON이 아니라 **302 리디렉션**을 반환한�
 ```
 `uploads/tmp/`에 올라온 파일은 연결되지 않으면 S3 수명 주기 규칙으로 1일 후 자동 삭제한다.
 
+구현: `backend/app/admin_uploads.py`, `backend/app/storage.py` (ADR 0026)
+- **HEIC는 받지 않는다.** 크롬 등 대부분 브라우저가 표시하지 못한다. 아이폰은 사진을 올릴 때 JPEG로 바꿔 준다
+- 큰 사진은 관리 화면(브라우저)에서 줄여서 올린다 (예: 긴 변 2000px WebP). 서버에서 줄이면 api 메모리 한도를 넘을 수 있다
+- 업로드 정책이 key 하나, `Content-Type`, 크기를 강제한다 (실제 S3에서 다른 형식·key·크기가 거부되는 것을 확인했다)
+- 버킷 설정이 없으면(로컬) 업로드 API는 `503 SERVICE_UNAVAILABLE`
+
 #### 사진 연결·정렬·삭제
 `{대상}`은 `workshops`, `cases`, `showcase`, `guides` 중 하나.
 
 | 요청 | 본문 | 설명 |
 |---|---|---|
-| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 `images/{대상}/{id}/`로 옮기고 연결 (CloudFront `/images/*`로만 공개, ADR 0021) |
+| `POST /admin/{대상}/{id}/images` | `{ "s3_key": "...", "alt_text": "..." }` | 파일을 확인한 뒤 `images/{대상}/{id}/`로 옮기고 연결 (CloudFront `/images/*`로만 공개, ADR 0021). 항목당 20장 |
 | `PUT /admin/{대상}/{id}/images/order` | `{ "image_ids": [7, 3, 5] }` | 첫 번째가 대표 사진 |
 | `PATCH /admin/images/{image_id}` | `{ "alt_text": "..." }` | 설명 수정 |
 | `DELETE /admin/images/{image_id}` | | DB와 S3에서 삭제 |
+
+사진 연결 전에 서버가 S3에서 직접 확인한다. 하나라도 맞지 않으면 `422`, 파일은 tmp에 남아 1일 뒤 지워진다.
+| 확인 | 막는 것 |
+|---|---|
+| `s3_key`가 `uploads/tmp/{32자리}.{jpg,png,webp}` 형식 | 이미 공개된 다른 사진이나 `../` 경로 지정 |
+| 파일이 있다, 크기 10MB 이하, `Content-Type`이 확장자와 맞다 | 올리지 않은 key, 정책 우회 |
+| 앞 16바이트가 JPEG/PNG/WebP 서명 | 이름만 사진인 HTML·스크립트 |
+
+순서는 "S3 복사 → DB 저장 → tmp 삭제". DB 저장이 실패하면 복사본을 지우고 `503`.
+사진 이름은 매번 새로 만들어(uuid) CloudFront 캐시를 1년(`immutable`) 둔다. 사진 파일 삭제가 실패해도 요청은 성공(DB가 기준), 지표 `dowha_storage_errors_total`로 남는다.
 
 ### QR 코드
 
@@ -337,7 +362,7 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 |---|---|
 | `GET /admin/settings` | 사장님이 바꿀 수 있는 설정 (연락처, 외부 링크, 주소, 영업시간, 출강 지역, 소개서) |
 | `PATCH /admin/settings` | `{ "store.hours": "..." }`처럼 바꿀 키만 보낸다. 키별 형식 검증 |
-| `PUT /admin/settings/brochure` | `{ "s3_key": "uploads/tmp/....pdf" }` → `files/brochure.pdf`로 옮기고 CloudFront 캐시를 무효화 |
+| `PUT /admin/settings/brochure` | `{ "s3_key": "uploads/tmp/....pdf" }` → PDF인지 확인(`%PDF-`), site 버킷 `files/brochure.pdf`로 옮기고 CloudFront 캐시를 무효화. 응답 `{ "brochure_url": "..." }` |
 
 `privacy.retention_months` 같은 운영 설정은 운영자(SQLAdmin)만 바꾼다.
 
@@ -355,7 +380,6 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `store.address`, `store.hours`, `outreach.service_area` | 200자 이하 |
 
 외부 링크를 정해진 주소로 제한하는 이유: 관리자 로그인이 털려도 손님을 피싱 사이트로 보내기 어렵게.
-소개서 교체(`PUT /admin/settings/brochure`)는 사진 업로드(S3)와 함께 만든다.
 
 ---
 

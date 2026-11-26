@@ -123,10 +123,12 @@ data "aws_iam_policy_document" "github_deploy" {
   }
 }
 
-# 워크플로가 읽는 배포 대상. Terraform이 원본이라 인프라가 바뀌어도 GitHub 변수를 손으로 맞출 필요가 없다.
+# 워크플로와 서버(deploy.sh → API 환경 변수)가 읽는 배포 대상.
+# Terraform이 원본이라 인프라가 바뀌어도 GitHub 변수나 서버 설정을 손으로 맞출 필요가 없다.
 locals {
   deploy_targets = {
     "site-bucket"                = module.storage.bucket_ids["site"]
+    "media-bucket"               = module.storage.bucket_ids["media"]
     "cloudfront-distribution-id" = module.cdn.distribution_id
   }
 }

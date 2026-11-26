@@ -24,6 +24,7 @@ CODES = {
     422: ("VALIDATION_ERROR", "입력값을 확인해주세요."),
     429: ("RATE_LIMITED", "요청이 너무 많아요. 잠시 후 다시 시도해주세요."),
     500: ("INTERNAL_ERROR", "일시적인 오류가 생겼어요. 잠시 후 다시 시도해주세요."),
+    503: ("SERVICE_UNAVAILABLE", "잠시 사용할 수 없어요. 잠시 후 다시 시도해주세요."),
 }
 
 # pydantic 오류 종류별 기본 한글 메시지. 직접 쓴 검증(ValueError)은 그 메시지를 그대로 쓴다.
