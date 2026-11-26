@@ -94,6 +94,49 @@ data "aws_iam_policy_document" "github_deploy" {
     actions   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
     resources = ["*"]
   }
+
+  # 정적 사이트 파일(지금은 오류 페이지, 5단계부터 Next.js 빌드 결과) 업로드.
+  # files/ 아래(소개서 PDF)는 서버가 관리하므로 배포가 건드리지 않는다 (워크플로에서 제외).
+  statement {
+    sid       = "UploadSite"
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["${module.storage.bucket_arns["site"]}/*"]
+  }
+
+  statement {
+    sid       = "ListSite"
+    actions   = ["s3:ListBucket"]
+    resources = [module.storage.bucket_arns["site"]]
+  }
+
+  statement {
+    sid       = "InvalidateCache"
+    actions   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+    resources = [module.cdn.distribution_arn]
+  }
+
+  # 배포 대상 정보 (아래 aws_ssm_parameter.deploy_target)
+  statement {
+    sid       = "ReadDeployTarget"
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:${var.region}:*:parameter${local.ssm_parameter_prefix}/deploy/*"]
+  }
+}
+
+# 워크플로가 읽는 배포 대상. Terraform이 원본이라 인프라가 바뀌어도 GitHub 변수를 손으로 맞출 필요가 없다.
+locals {
+  deploy_targets = {
+    "site-bucket"                = module.storage.bucket_ids["site"]
+    "cloudfront-distribution-id" = module.cdn.distribution_id
+  }
+}
+
+resource "aws_ssm_parameter" "deploy_target" {
+  for_each = local.deploy_targets
+
+  name  = "${local.ssm_parameter_prefix}/deploy/${each.key}"
+  type  = "String"
+  value = each.value
 }
 
 resource "aws_iam_role_policy" "github_deploy" {
