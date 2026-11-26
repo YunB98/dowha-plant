@@ -31,3 +31,4 @@
 | [0024](0024-db-migrations-on-startup.md) | DB 마이그레이션은 Alembic, API 시작 시 적용 | 채택 |
 | [0025](0025-admin-session-cookie.md) | 관리자 로그인은 서명 토큰 쿠키, 계정은 서버 명령으로만 | 채택 |
 | [0026](0026-s3-access-without-boto3.md) | S3·CloudFront 접근은 botocore 서명 + httpx (boto3 미사용) | 채택 |
+| [0027](0027-blog-feed-and-plant-catalog.md) | 블로그 글을 RSS로 가져와 식물 진열장으로 정리 | 채택 |

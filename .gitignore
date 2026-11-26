@@ -38,3 +38,6 @@ backend.hcl
 
 # 서버에서 SSM 값으로 만드는 파일
 deploy/monitoring/alertmanager/rendered/
+
+# 디자인 시안 (가게 사진이 들어가서 저장소에 올리지 않는다)
+design-drafts/
