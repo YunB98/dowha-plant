@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import errors, inquiries, qr
+from app import errors, inquiries, public, qr
 from app.config import get_settings
 from app.db import get_db
 
@@ -30,6 +30,7 @@ app = FastAPI(
     openapi_url=None if settings.is_prod else "/api/openapi.json",
 )
 errors.register(app)
+app.include_router(public.router)
 app.include_router(inquiries.router)
 app.include_router(qr.router)
 

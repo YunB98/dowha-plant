@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # compose는 postgresql://... 형식으로 넘긴다. SQLAlchemy 드라이버(psycopg 3)를 붙여서 쓴다.
     database_url: str = "postgresql://dowha:dowha@localhost:5432/dowha"
 
+    # 사진·파일 주소를 만들 때 쓰는 사이트 주소 (CloudFront)
+    public_base_url: str = "https://dowha-plant.shop"
+
     # 문의 알림. 비어 있으면 보내지 않는다 (로컬, 테스트)
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""

@@ -50,10 +50,17 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 
 ## 1. 손님용 API (인증 없음)
 
+구현: `backend/app/public.py`. 공통으로
+- 비공개 항목(`hidden`, `draft`, `is_published=false`)은 목록에서 빠지고, 상세는 `404`로 응답한다 (있는지도 알려 주지 않는다)
+- `image_url`은 `https://dowha-plant.shop/` + `s3_key` (media 버킷 `images/` → CloudFront `/images/*`). 주소 앞부분은 환경 변수 `PUBLIC_BASE_URL`로 바꿀 수 있다
+- `thumbnail_url`은 `sort_order`가 가장 작은 사진, 사진이 없으면 `null`
+- 사진은 항목마다 따로 읽지 않고 한 번에 읽는다 (목록 크기와 상관없이 쿼리 수가 같다. 테스트로 확인)
+
 ### 가게 정보
 
 #### `GET /api/v1/store`
-화면에 표시할 공개 설정값만 반환한다.
+화면에 표시할 공개 설정값만 반환한다. 아직 채우지 않은 값은 `null`이다 (화면에서 그 항목을 숨긴다).
+`privacy.*` 같은 내부 설정은 내보내지 않는다. `brochure_url`은 `outreach.brochure_s3_key`가 있을 때만 만든다.
 
 ```json
 {
@@ -67,7 +74,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 클래스
 
 #### `GET /api/v1/workshops`
-`open`, `closed` 클래스를 반환한다 (`hidden` 제외).
+`open`, `closed` 클래스를 `sort_order` 순으로 반환한다 (`hidden` 제외). `closed`는 "지금은 모집하지 않음"으로 보여 준다.
 
 ```json
 [
@@ -91,7 +98,8 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 진행 사례
 
 #### `GET /api/v1/cases?organization_type=school&page=1`
-공개된 사례를 진행 날짜 최신순으로 반환한다.
+공개된 사례를 진행 날짜 최신순으로 반환한다. `size`는 최대 50, 잘못된 `organization_type`·`page`·`size`는 `422`.
+연결된 클래스가 숨김(`hidden`)이면 `workshop`은 `null`이다.
 
 ```json
 {
@@ -126,7 +134,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ### 식물 가이드
 
 #### `GET /api/v1/guides`
-공개된 가이드 목록 (`slug`, `name`, `difficulty`, `summary`, `thumbnail_url`).
+공개된 가이드 목록 (`slug`, `name`, `difficulty`, `summary`, `thumbnail_url`), 이름순.
 
 #### `GET /api/v1/guides/{slug}`
 가이드 전체 내용과 사진. 비공개(`draft`)는 404.
