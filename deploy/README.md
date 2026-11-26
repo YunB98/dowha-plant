@@ -51,6 +51,18 @@ sudo docker compose exec api python -m app.admin_cli list
 | 휴대폰을 잃어버렸다, 로그인 실패 경보(`AdminLoginFailures`)가 왔다 | `logout-all owner` 후 `set-password owner` |
 | 모든 계정을 한 번에 로그아웃 | SSM `session-secret` 값을 바꾸고 다시 배포 |
 
+## 정기 작업 (systemd 타이머, deploy.sh가 설치)
+| 타이머 | 시각 | 하는 일 | 확인 |
+|---|---|---|---|
+| `dowha-cert-renew` | 하루 두 번 | 오리진 인증서 갱신 | `journalctl -u dowha-cert-renew` |
+| `dowha-pii-purge` | 매일 03:30 KST | 보관 기간이 지난 문의의 개인정보 삭제 | `journalctl -u dowha-pii-purge` |
+
+```bash
+systemctl list-timers 'dowha-*'                                       # 다음 실행 시각
+sudo docker compose exec -T api python -m app.purge --dry-run        # 지금 지울 대상 수
+```
+경보 `PiiPurgeOverdue`가 오면: 타이머가 켜져 있는지(`systemctl status dowha-pii-purge.timer`), 마지막 실행 로그를 본다.
+
 ## 운영자 접속 (SSM 포트 포워딩)
 ```bash
 aws ssm start-session --target <인스턴스 ID> \

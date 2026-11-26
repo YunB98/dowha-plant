@@ -401,6 +401,10 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `dowha_inquiries_created_total{type, source}` | 문의 접수 수 |
 | `dowha_qr_scans_total{result}` | QR 스캔 수 (`guide`, `fallback`, `unknown`) |
 | `dowha_notifications_failed_total{channel}` | 알림 실패 수 (알림 대상) |
+| `dowha_inquiries_pii_overdue` | 보관 기간 + 2일이 지났는데 개인정보가 남은 문의 수. 0이어야 한다 (경보 `PiiPurgeOverdue`) |
+| `dowha_admin_logins_total{result}` | 관리자 로그인 시도 (경보 `AdminLoginFailures`) |
+| `dowha_uploads_rejected_total{reason}`, `dowha_storage_errors_total{operation}` | 업로드 거부, S3·CloudFront 실패 |
+| `dowha_site_rebuild_requests_total` | 공개 콘텐츠 변경으로 사이트 재빌드를 요청한 수 |
 
 월별 추이 같은 장기 집계는 Grafana에서 PostgreSQL을 직접 조회한다.
 

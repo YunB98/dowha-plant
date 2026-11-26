@@ -263,11 +263,18 @@ IP, 기기 정보는 저장하지 않는다. 스캔 수 집계용.
 
 ## 개인정보 자동 삭제
 
-매일 실행되는 작업이 아래 조건의 문의에서 개인정보를 지운다.
+매일 한국 시간 03:30에 서버 타이머가 실행한다 (`backend/app/purge.py`, `deploy/systemd/dowha-pii-purge.*`).
 
-- 조건: `status`가 `completed` 또는 `canceled`이고, `completed_at`(또는 `updated_at`)이 `privacy.retention_months` 이전
-- 처리: `contact_name` → `"(삭제됨)"`, `phone`·`email` → NULL, `pii_purged_at` 기록
-- 기관명, 기관 유형, 인원, 유입 경로 같은 통계용 정보는 남긴다.
+- 조건: `status`가 `completed` 또는 `canceled`이고, `completed_at`이 `privacy.retention_months`(기본 6, 1~60) 개월 이전
+  - 개월 계산은 PostgreSQL interval (5월 31일 + 6개월 = 11월 30일)
+  - 끝난 문의를 다시 진행 중으로 돌리면 `completed_at`이 지워져 대상에서 빠진다 (관리 API)
+- 처리: `contact_name`·`phone`·`email` → NULL, `message`·`admin_memo` → 빈 문자열, `pii_purged_at` 기록
+  - 요청사항과 메모는 자유 입력이라 연락처가 섞여 있을 수 있어서 같이 지운다
+  - 처음 설계는 이름을 `"(삭제됨)"`으로 바꾸는 것이었지만, NULL + CHECK(마이그레이션 0003)로 바꿨다. 가짜 값은 실제 이름과 구별되지 않는다
+- 기관명, 기관 유형, 인원, 일정, 장소, 유입 경로, 상태, 시각은 통계용으로 남긴다.
+- 감시: API 지표 `dowha_inquiries_pii_overdue`(기한 + 2일이 지났는데 남은 수)가 1시간 넘게 0보다 크면 경보 `PiiPurgeOverdue`.
+  타이머가 멈췄는지가 아니라 결과를 보므로, 타이머 정지·코드 오류·설정 오류를 하나의 경보로 잡는다.
+- 진행 중 상태로 오래 방치된 문의는 대상이 아니다. 사장님이 끝내거나 취소해야 보관 기간이 시작된다.
 
 > 보관 기간은 확인이 필요하다. 견적과 계약이 실제로 이뤄진 경우 관련 법령의 기록 보관 의무가 있을 수 있다.
 
