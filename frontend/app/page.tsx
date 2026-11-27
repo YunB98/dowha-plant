@@ -12,7 +12,7 @@ export default async function Home() {
     <>
       <section className="hero">
         <div className="hero-copy">
-          <h1>당신의 일상에,<br />꽃과 초록을 더하다.</h1>
+          <h1>꽃으로 건네는<br />가장 다정한 안부, 도화.</h1>
         </div>
         <HeroScrollCue />
       </section>
