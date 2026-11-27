@@ -119,3 +119,9 @@ install -m 644 systemd/dowha-pii-purge.service /etc/systemd/system/
 install -m 644 systemd/dowha-pii-purge.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now dowha-pii-purge.timer
+
+# 블로그 새 글 가져오기 (매시간, backend/app/blog_import.py, ADR 0027)
+install -m 644 systemd/dowha-blog-import.service /etc/systemd/system/
+install -m 644 systemd/dowha-blog-import.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now dowha-blog-import.timer

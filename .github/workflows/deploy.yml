@@ -1,7 +1,8 @@
 # 애플리케이션 배포 (ADR 0023)
 #   PR      : test (백엔드 테스트, Compose·스크립트 검사)
 #   main    : test → deploy (production 승인 후)
-#             ARM 러너에서 이미지 빌드 → ECR push → 배포 묶음 S3 업로드 → SSM으로 서버에서 deploy.sh → 헬스 체크
+#             ARM 러너에서 이미지 빌드 → ECR push → 배포 묶음 S3 업로드 → SSM으로 서버에서 deploy.sh
+#             → API 준비 확인 → 운영 API로 정적 사이트 빌드 → S3 업로드 → 사이트 확인
 # 인프라 변경은 terraform.yml이 맡는다. 이 워크플로는 서버 안의 컨테이너만 바꾼다.
 name: deploy
 
@@ -104,14 +105,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # 정적 사이트 (ADR 0015, 0028). 여기서 만든 결과물을 deploy가 그대로 올린다 (한 번 빌드한 것을 배포)
-      # - 내용은 빌드할 때 운영 API(공개 조회)에서 받는다. API가 응답하지 않으면 빌드가 실패한다 (빈 사이트 배포 방지)
-      # - SITE_STAGE가 live가 아니면 "준비 중" 띠와 noindex가 붙는다. 출시할 때 live로 바꾼다
-      - name: 프론트엔드 빌드
+      # 정적 사이트 컴파일 확인 (ADR 0015, 0028). 예시 데이터로 빌드한다.
+      # 운영 내용으로 빌드하는 것은 deploy 단계에서 새 백엔드가 뜬 뒤에 한다 (새 API를 쓰는 화면이 있으므로)
+      - name: 프론트엔드 빌드 확인
         working-directory: frontend
-        env:
-          CONTENT_SOURCE: api
-          API_BASE_URL: ${{ env.SITE_URL }}
         run: |
           npm ci --no-audit --no-fund
           npm run typecheck
@@ -120,13 +117,6 @@ jobs:
           test -f out/index.html
           test -f out/error.html
           grep -q '찾으시는 페이지가 없어요' out/404.html
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: frontend/out
-          retention-days: 7
-          if-no-files-found: error
 
   deploy:
     name: deploy (prod)
@@ -239,11 +229,35 @@ jobs:
           echo "상태: $status"
           [ "$status" = "Success" ]
 
-      - name: 정적 사이트 받기 (test 단계 빌드 결과)
-        uses: actions/download-artifact@v4
+      # /ready는 DB 연결까지 확인한다 (마이그레이션 실패나 DB 장애를 잡는다).
+      # 사이트는 이 API에서 내용을 받아 빌드하므로 먼저 확인한다
+      - name: API 준비 확인 (CloudFront 경유)
+        run: |
+          for i in $(seq 1 12); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/api/v1/health/ready" || true)"
+            echo "시도 $i: $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          exit 1
+
+      - uses: actions/setup-node@v5
         with:
-          name: site
-          path: site
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # 방금 배포한 백엔드의 공개 API에서 내용을 받아 정적 사이트를 만든다.
+      # API가 응답하지 않으면 빌드가 실패한다 (빈 사이트 배포 방지).
+      # SITE_STAGE가 live가 아니면 "준비 중" 띠와 noindex가 붙는다. 출시할 때 live로 바꾼다
+      - name: 정적 사이트 빌드 (운영 API 내용)
+        working-directory: frontend
+        env:
+          CONTENT_SOURCE: api
+          API_BASE_URL: ${{ env.SITE_URL }}
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
 
       # Next.js 빌드 결과(out/)를 올린다.
       # - _next/static은 파일 이름에 해시가 있어 1년 캐시, 나머지(HTML 등)는 5분
@@ -251,32 +265,24 @@ jobs:
       # - 이전 빌드의 페이지는 지운다(--delete). 빈 결과물로 사이트를 지우지 않게 먼저 확인한다
       #   _next/static의 옛 파일은 남긴다 (배포 중에 옛 HTML을 받은 손님이 깨지지 않게)
       - name: 정적 사이트 업로드
+        working-directory: frontend
         run: |
           for f in index.html 404.html error.html; do
-            test -s "site/$f" || { echo "빌드 결과에 $f 가 없습니다"; exit 1; }
+            test -s "out/$f" || { echo "빌드 결과에 $f 가 없습니다"; exit 1; }
           done
           bucket="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/site-bucket --query Parameter.Value --output text)"
           dist="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/cloudfront-distribution-id --query Parameter.Value --output text)"
-          aws s3 sync site/_next/static "s3://${bucket}/_next/static" \
+          aws s3 sync out/_next/static "s3://${bucket}/_next/static" \
             --cache-control "public, max-age=31536000, immutable" --only-show-errors
-          aws s3 sync site "s3://${bucket}/" --exclude "_next/static/*" --exclude "files/*" --delete \
+          aws s3 sync out "s3://${bucket}/" --exclude "_next/static/*" --exclude "files/*" --delete \
             --cache-control "public, max-age=300" --only-show-errors
-          id="$(aws cloudfront create-invalidation --distribution-id "$dist" --paths "/*"             --query Invalidation.Id --output text)"
+          id="$(aws cloudfront create-invalidation --distribution-id "$dist" --paths "/*" \
+            --query Invalidation.Id --output text)"
           echo "캐시 무효화: $id"
           aws cloudfront wait invalidation-completed --distribution-id "$dist" --id "$id"
 
-      # /ready는 DB 연결까지 확인한다 (마이그레이션 실패나 DB 장애를 잡는다)
-      - name: 헬스 체크 (CloudFront 경유)
+      - name: 사이트 확인 (CloudFront 경유)
         run: |
-          ok=false
-          for i in $(seq 1 12); do
-            code="$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/api/v1/health/ready" || true)"
-            echo "시도 $i: $code"
-            if [ "$code" = "200" ]; then ok=true; break; fi
-            sleep 10
-          done
-          $ok
-
           # 없는 주소는 S3 403 → 404 페이지(404 응답)로 바뀌어야 한다 (ADR 0021)
           code="$(curl -s -o page.html -w '%{http_code}' "$SITE_URL/__deploy-check-missing-page")"
           echo "없는 페이지: $code"

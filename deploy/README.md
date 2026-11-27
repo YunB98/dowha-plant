@@ -56,10 +56,12 @@ sudo docker compose exec api python -m app.admin_cli list
 |---|---|---|---|
 | `dowha-cert-renew` | 하루 두 번 | 오리진 인증서 갱신 | `journalctl -u dowha-cert-renew` |
 | `dowha-pii-purge` | 매일 03:30 KST | 보관 기간이 지난 문의의 개인정보 삭제 | `journalctl -u dowha-pii-purge` |
+| `dowha-blog-import` | 매시간 | 네이버 블로그 새 글 가져오기 (대표 사진은 S3 사본) | `journalctl -u dowha-blog-import` |
 
 ```bash
 systemctl list-timers 'dowha-*'                                       # 다음 실행 시각
 sudo docker compose exec -T api python -m app.purge --dry-run        # 지금 지울 대상 수
+sudo docker compose exec -T api python -m app.blog_import            # 블로그 새 글 지금 가져오기
 ```
 경보 `PiiPurgeOverdue`가 오면: 타이머가 켜져 있는지(`systemctl status dowha-pii-purge.timer`), 마지막 실행 로그를 본다.
 

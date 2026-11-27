@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     site_bucket: str = ""
     cloudfront_distribution_id: str = ""
 
+    # 블로그 글 가져오기 (ADR 0027)
+    blog_rss_url: str = "https://rss.blog.naver.com/dowha_plantshop.xml"
+
     # 관리자 로그인 토큰 서명 키. 운영에서는 SSM session-secret (deploy.sh → .env → compose).
     # 바꾸면 발급된 토큰이 모두 무효가 된다 (전체 로그아웃).
     session_secret: str = ""

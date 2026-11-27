@@ -3,7 +3,7 @@
  *
  * CONTENT_SOURCE=api  : 운영 API에서 받는다 (CI 빌드). 실패하면 빌드를 멈춘다 (빈 사이트 배포 방지)
  * 그 외(기본)          : lib/demo.ts 예시 데이터 (로컬 개발)
- * 식물(블로그 글)은 아직 API가 없어 두 경우 모두 예시 데이터다 (ADR 0027, S-01).
+ * 식물은 블로그 식물 소개 글이다 (서버가 RSS로 가져온다, ADR 0027).
  *
  * API 응답(snake_case)을 화면용 타입(lib/demo.ts)으로 바꾸는 곳은 여기 한 곳이다.
  */
@@ -58,6 +58,11 @@ type ApiCase = {
   held_on: string; participant_count: number | null; thumbnail_url: string | null;
 };
 type ApiCaseDetail = ApiCase & { summary: string; images: ApiImage[] };
+type ApiPlant = {
+  id: number; name: string; excerpt: string; thumbnail_url: string | null; purposes: string[];
+  sale_status: Plant["saleStatus"]; price: number | null; size: string; published_at: string;
+  blog_url: string; guide_slug: string | null;
+};
 type ApiGuide = { slug: string; name: string; difficulty: Guide["difficulty"]; summary: string; thumbnail_url: string | null };
 type ApiGuideDetail = ApiGuide & {
   light: string; watering: string; temperature: string; humidity: string; seasonal_care: string; troubleshooting: string;
@@ -147,10 +152,15 @@ export async function getGuide(slug: string): Promise<Guide | undefined> {
   };
 }
 
-// ---------- 식물 (블로그 글, 아직 예시) ----------
+// ---------- 식물 (블로그 식물 소개 글, ADR 0027) ----------
 
 export async function getPlants(): Promise<Plant[]> {
-  return PLANTS;
+  if (!USE_API) return PLANTS;
+  return (await get<ApiPlant[]>("/plants")).map((p) => ({
+    id: String(p.id), name: p.name, image: p.thumbnail_url, summary: p.excerpt,
+    saleStatus: p.sale_status, price: p.price, size: p.size, purposes: p.purposes,
+    guideSlug: p.guide_slug, publishedAt: p.published_at, blogUrl: p.blog_url,
+  }));
 }
 
 /** 목록이 비면 상세 페이지 묶음이 0개가 되는데, 정적 내보내기는 0개를 허용하지 않는다.

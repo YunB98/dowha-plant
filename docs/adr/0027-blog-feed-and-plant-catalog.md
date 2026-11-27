@@ -44,12 +44,25 @@
 3. **판매 중인 식물**을 위로, 가격·크기 표시
 4. 같은 식물 이름의 **관리 가이드와 QR 카드**로 연결
 
-## 데이터 변경 (백엔드, 다음 작업)
-- `blog_posts`: `guid`(원문 주소, 고유), `title`, `excerpt`, `kind`(plant/class/outreach/gift/other), `tags`(원본), `filters`(정리된 필터),
-  `thumbnail_s3_key`, `published_at`, `is_hidden`
-- 판매 정보: `blog_posts`에 `price`, `sale_status`(available/reserved/sold), `size`(s/m/l), `plant_guide_id`를 직접 둔다.
-  기존 `showcase_items`(작품)는 블로그 글이 아닌 대표 작품용으로 남긴다
-- 설정: `contact.naver_talk_url`, `delivery.note` 추가
+## 구현 (2026-11-27)
+- `blog_posts` (마이그레이션 0004): `guid`(원문 주소, 고유), `title`, `display_name`(사장님이 정한 짧은 이름), `excerpt`,
+  `kind`(plant/class/outreach/gift/other), `tags`(원본), `purposes`(정리된 필터), `thumbnail_s3_key`, `published_at`, `is_hidden`,
+  판매 정보 `sale_status`(available/reserved/sold), `price`, `size`(**자유 입력**, ADR 0028), `plant_guide_id`
+- `backend/app/blog_import.py`: 매시간 systemd 타이머. 이미 있는 글은 건드리지 않는다 (사장님이 고친 값 보존)
+- 손님 API `GET /api/v1/plants`, `/plants/{id}`, 관리 API `GET·PATCH /api/v1/admin/blog-posts` (A-05)
+- 설정 `contact.naver_talk_url` 추가. 배송 안내는 설정 키 대신 상세 페이지 공통 안내 문구로 두었다
+- 감시: `dowha_blog_import_age_seconds` > 6시간이면 `BlogImportStale` 경보
+
+### 실제 글 50개로 고친 규칙
+처음 규칙을 실제 RSS(2026-01~11, 50개)에 돌려 보고 바꿨다. 테스트에 실제 제목을 그대로 넣어 두었다.
+
+| 문제 | 처음 | 바꾼 뒤 |
+|---|---|---|
+| 목적 태그를 블로그 태그에서 찾으면 검색용 태그(`전주개업화분`, `거실인테리어`)가 거의 모든 글에 붙어 있다 | 거실·매장 40개, 개업·승진 38개 (필터가 의미 없음) | **제목에서만** 찾는다: 21개, 23개 |
+| "꽃이 피는 식물"을 "피어나"로 찾음 | 프랑스고무나무("열매 안쪽에서 피어나") 오판 | 제목의 꽃·카네이션·작약, 요약의 "꽃을 피우" 등. "꽃집" 제외 |
+| 말머리가 없거나 다른 글 (`[전주 개업화분]`, 말머리 없음) | 13개 분류 안 됨 | 말머리 → 제목 전체 순으로 출강·클래스·답례품 단서를 찾고, 없으면 **식물** |
+| 블로그 제목이 길어(최대 70자) 상세 제목이 6줄 | | 따옴표 안 이름(`'홍콩야자'`)을 먼저, 없으면 `|` 앞, 끝의 괄호 제거 (평균 27자) |
+| 요약이 모두 같은 인사로 시작 ("안녕하세요. … 도화입니다.") | | 첫 인사 문장을 뗀다 (40개 모두) |
 
 ## 대안
 | 대안 | 제외 이유 |

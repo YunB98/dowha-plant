@@ -1,0 +1,11 @@
+[Unit]
+Description=Import new blog posts every hour
+
+[Timer]
+# 사장님이 블로그에 글을 올리면 한 시간 안에 사이트 데이터에 들어간다 (사이트 반영은 재빌드 후)
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Photo } from "@/components/cards";
 import { type Plant, SALE_LABEL, type SaleStatus } from "@/lib/demo";
 import { won } from "@/lib/format";
 
@@ -53,8 +54,7 @@ export function PlantCard({ plant }: { plant: Plant }) {
   return (
     <Link className="plant-card" href={`/plants/${plant.id}/`}>
       <div className="plant-photo">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 정적 배포라 next/image 최적화를 쓰지 않는다 */}
-        <img src={plant.image} alt={plant.name} loading="lazy" />
+        <Photo src={plant.image} alt={plant.name} />
         <StatusBadge status={plant.saleStatus} />
       </div>
       <div className="card-text">

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Photo } from "@/components/cards";
 import { ContactButton } from "@/components/dialogs";
 import { StatusBadge } from "@/components/ui";
 import { getGuides, getPlants, PLACEHOLDER, staticParams } from "@/lib/content";
@@ -33,8 +34,7 @@ export default async function PlantDetail({ params }: Props) {
     <div className="wrap content">
       <div className="crumb"><Link href="/">홈</Link> / <Link href="/plants/">식물</Link> / {p.name}</div>
       <div className="detail">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={p.image} alt={p.name} />
+        <Photo src={p.image} alt={p.name} />
         <div className="detail-info">
           <StatusBadge status={p.saleStatus} />
           <h1>{p.name}</h1>

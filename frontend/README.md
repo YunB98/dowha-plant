@@ -15,10 +15,10 @@ CONTENT_SOURCE=api npm run build   # 운영 API 내용으로 빌드 (CI와 같�
 ## 내용은 어디서 오나 (`lib/content.ts`)
 | `CONTENT_SOURCE` | 내용 | 쓰는 곳 |
 |---|---|---|
-| `api` | 빌드할 때 운영 공개 API(`/api/v1/store`, `/workshops`, `/cases`, `/guides`)에서 받는다. 실패하면 빌드 실패 | CI (deploy.yml) |
+| `api` | 빌드할 때 운영 공개 API(`/api/v1/store`, `/plants`, `/workshops`, `/cases`, `/guides`)에서 받는다. 실패하면 빌드 실패 | CI (deploy.yml) |
 | 없음 | `lib/demo.ts` 예시 데이터 | 로컬 개발 |
 
-- 식물(블로그 글)은 아직 API가 없어 두 경우 모두 예시 데이터다 (ADR 0027 S-01을 만들면 바꾼다)
+- 식물은 블로그 식물 소개 글 (`/api/v1/plants`, 서버가 매시간 RSS로 가져온다, ADR 0027)
 - 손님 브라우저는 API를 부르지 않는다 (견적 문의 접수만 예외). 관리 화면에서 내용을 바꾸면 **다시 빌드·배포해야** 사이트에 보인다
   (자동 재빌드는 ADR 0015, 아직 연결 전)
 - 목록이 비어도 빌드되도록 상세 페이지에 자리표시 주소(`_`)를 하나 만들고, 빌드 후 지운다 (`scripts/build-hooks.mjs`)
@@ -46,7 +46,7 @@ CONTENT_SOURCE=api npm run build   # 운영 API 내용으로 빌드 (CI와 같�
 - [x] 식물 목록(목적·판매 중 필터)·상세, 클래스·상세, 진행 사례(기관 종류·페이지)·상세,
       관리 가이드(이름 검색)·상세, 오시는 길, 링크 모음
 - [x] 견적 문의: **실제 API로 접수** (`POST /api/v1/inquiries`), 서버 필수 항목에 맞춤, 칸별 오류 표시, 첫 방문 경로 기록
-- [ ] 빌드 시 API 조회 (`/api/v1/store`, `/workshops`, `/cases`, `/guides`, 블로그 식물)
+- [x] 빌드 시 API 조회 (`/api/v1/store`, `/plants`, `/workshops`, `/cases`, `/guides`)
 - [ ] 관리 화면 (프로토타입 `#/admin`)
 
 ### 목록 필터와 정적 빌드

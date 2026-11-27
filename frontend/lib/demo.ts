@@ -9,14 +9,14 @@ export type SaleStatus = "available" | "reserved" | "sold";
 export type Plant = {
   id: string;
   name: string;
-  image: string; // /assets/… 또는 CloudFront image_url
+  image: string | null; // /assets/… 또는 CloudFront image_url. 없으면 빈 칸
   summary: string;
   saleStatus: SaleStatus | null; // null: 소개 글 (배지 없음)
   price: number | null; // null: "상담 후 안내"
   size: string; // 자유 입력 ("약 55cm"), 빈 문자열이면 숨김
   purposes: string[];
   guideSlug: string | null;
-  publishedAt: string; // YYYY-MM-DD
+  publishedAt: string; // ISO 날짜(시각). 최신순 정렬에 쓴다
   blogUrl: string | null;
 };
 
