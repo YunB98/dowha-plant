@@ -143,6 +143,7 @@ def not_found() -> HTTPException:
 STORE_KEYS: dict[str, tuple[str, str]] = {
     "contact.phone": ("contact", "phone"),
     "contact.kakao_url": ("contact", "kakao_url"),
+    "contact.naver_talk_url": ("contact", "naver_talk_url"),  # ADR 0027
     "contact.instagram": ("contact", "instagram"),
     "links.smartstore_url": ("links", "smartstore_url"),
     "links.naver_place_url": ("links", "naver_place_url"),

@@ -5,16 +5,17 @@ import { notFound } from "next/navigation";
 
 import { heldOn, Photo } from "@/components/cards";
 import { PageTop } from "@/components/ui";
-import { CASES, ORGANIZATION_LABEL } from "@/lib/demo";
+import { getCase, getCases, PLACEHOLDER, staticParams } from "@/lib/content";
+import { ORGANIZATION_LABEL } from "@/lib/demo";
 
 export const dynamicParams = false;
 
-export function generateStaticParams() {
-  return CASES.map((c) => ({ id: String(c.id) }));
+export async function generateStaticParams() {
+  return staticParams("id", (await getCases()).map((c) => String(c.id)));
 }
 
 type Props = { params: Promise<{ id: string }> };
-const find = async (params: Props["params"]) => { const { id } = await params; return CASES.find((c) => String(c.id) === id); };
+const find = async (params: Props["params"]) => { const { id } = await params; return id === PLACEHOLDER ? undefined : getCase(Number(id)); };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = await find(params);

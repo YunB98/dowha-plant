@@ -105,9 +105,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       # 정적 사이트 (ADR 0015, 0028). 여기서 만든 결과물을 deploy가 그대로 올린다 (한 번 빌드한 것을 배포)
-      # SITE_STAGE가 live가 아니면 "준비 중" 띠와 noindex가 붙는다. 출시할 때 live로 바꾼다
+      # - 내용은 빌드할 때 운영 API(공개 조회)에서 받는다. API가 응답하지 않으면 빌드가 실패한다 (빈 사이트 배포 방지)
+      # - SITE_STAGE가 live가 아니면 "준비 중" 띠와 noindex가 붙는다. 출시할 때 live로 바꾼다
       - name: 프론트엔드 빌드
         working-directory: frontend
+        env:
+          CONTENT_SOURCE: api
+          API_BASE_URL: ${{ env.SITE_URL }}
         run: |
           npm ci --no-audit --no-fund
           npm run typecheck

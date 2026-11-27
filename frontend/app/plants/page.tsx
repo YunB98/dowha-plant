@@ -5,15 +5,16 @@ import { Suspense } from "react";
 
 import { PlantsBrowser, PlantsView } from "@/components/plants-browser";
 import { PageTop } from "@/components/ui";
-import { PLANTS, PURPOSES } from "@/lib/demo";
+import { getPlants } from "@/lib/content";
+import { PURPOSES } from "@/lib/demo";
 
 export const metadata: Metadata = {
   title: "식물",
   description: "도화에서 소개한 식물. 개업·승진 선물, 집들이 선물, 거실·매장 인테리어 식물을 목적별로 골라 보세요.",
 };
 
-export default function PlantsPage() {
-  const plants = [...PLANTS].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+export default async function PlantsPage() {
+  const plants = [...(await getPlants())].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
   return (
     <>
       <PageTop en="PLANT COLLECTION" title="식물" sub="도화에서 소개한 식물들을 만나보세요." />

@@ -220,6 +220,7 @@ def test_update_settings_and_public_store(admin_client: TestClient, db: Session)
         "contact.phone": "01012345678",
         "contact.instagram": "@dowha_plantshop",
         "contact.kakao_url": "https://pf.kakao.com/_abc",
+        "contact.naver_talk_url": "https://naver.me/Gpl6QyeP",
         "links.naver_place_url": "https://naver.me/xYz",
         "store.hours": " 10:00~19:00, 월요일 휴무 ",
     }).json()
@@ -230,6 +231,7 @@ def test_update_settings_and_public_store(admin_client: TestClient, db: Session)
     # 손님 화면에 바로 반영
     store = admin_client.get("/api/v1/store").json()
     assert store["contact"]["phone"] == "010-1234-5678"
+    assert store["contact"]["naver_talk_url"] == "https://naver.me/Gpl6QyeP"
     assert store["store"]["hours"] == "10:00~19:00, 월요일 휴무"
 
 
@@ -249,6 +251,7 @@ def test_clear_setting(admin_client: TestClient, db: Session, empty: str | None)
         ({"contact.phone": "1234"}, "contact.phone"),
         ({"contact.instagram": "not a handle!"}, "contact.instagram"),
         ({"contact.kakao_url": "http://pf.kakao.com/_abc"}, "contact.kakao_url"),  # https만
+        ({"contact.naver_talk_url": "https://naver.me.evil.example/x"}, "contact.naver_talk_url"),
         ({"links.smartstore_url": "https://smartstore.naver.com.evil.example/x"}, "links.smartstore_url"),
         ({"links.naver_place_url": "https://evil.example/?naver.me"}, "links.naver_place_url"),
         ({"store.address": "x" * 201}, "store.address"),

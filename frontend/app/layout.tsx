@@ -11,6 +11,7 @@ import { DialogProvider } from "@/components/dialogs";
 import { Motion } from "@/components/motion";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getShop } from "@/lib/content";
 import { IS_PREVIEW } from "@/lib/format";
 
 // 프로토타입이 지정한 명조(--serif). 빌드할 때 받아 사이트에 같이 올린다 (preload 없이 필요할 때만)
@@ -31,15 +32,16 @@ export const viewport: Viewport = {
   themeColor: "#20291e",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const shop = await getShop();
   return (
     <html lang="ko" className={serif.variable}>
       <body>
         <a className="skip" href="#main">본문 바로가기</a>
-        <DialogProvider>
+        <DialogProvider shop={shop}>
           <SiteHeader />
           <main id="main" tabIndex={-1}>{children}</main>
-          <SiteFooter />
+          <SiteFooter shop={shop} />
         </DialogProvider>
         <Motion />
         <AttributionCapture />

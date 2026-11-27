@@ -5,17 +5,17 @@ import { notFound } from "next/navigation";
 
 import { Photo, workshopDuration, workshopPeople, WorkshopState } from "@/components/cards";
 import { ContactButton } from "@/components/dialogs";
-import { WORKSHOPS } from "@/lib/demo";
+import { getWorkshop, getWorkshops, PLACEHOLDER, staticParams } from "@/lib/content";
 import { won } from "@/lib/format";
 
 export const dynamicParams = false;
 
-export function generateStaticParams() {
-  return WORKSHOPS.map((w) => ({ id: String(w.id) }));
+export async function generateStaticParams() {
+  return staticParams("id", (await getWorkshops()).map((w) => String(w.id)));
 }
 
 type Props = { params: Promise<{ id: string }> };
-const find = async (params: Props["params"]) => { const { id } = await params; return WORKSHOPS.find((w) => String(w.id) === id); };
+const find = async (params: Props["params"]) => { const { id } = await params; return id === PLACEHOLDER ? undefined : getWorkshop(Number(id)); };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const w = await find(params);

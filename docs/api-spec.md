@@ -64,7 +64,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 
 ```json
 {
-  "contact": { "phone": "...", "kakao_url": "...", "instagram": "dowha_plantshop" },
+  "contact": { "phone": "...", "kakao_url": "...", "naver_talk_url": "...", "instagram": "dowha_plantshop" },
   "links": { "smartstore_url": "...", "naver_place_url": "..." },
   "store": { "address": "...", "hours": "..." },
   "outreach": { "service_area": "전주, 완주, 익산", "brochure_url": "https://dowha-plant.shop/files/brochure.pdf" }
@@ -375,6 +375,7 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `contact.phone` | 문의 접수와 같은 형식으로 맞춘다 (`01012345678` → `010-1234-5678`) |
 | `contact.instagram` | 계정 이름만 (`@`는 떼어 낸다) |
 | `contact.kakao_url` | `https://pf.kakao.com`, `open.kakao.com` |
+| `contact.naver_talk_url` | `https://naver.me`, `talk.naver.com` (ADR 0027) |
 | `links.smartstore_url` | `https://smartstore.naver.com` (하위 도메인 포함) |
 | `links.naver_place_url` | `https://naver.me`, `map.naver.com`, `place.naver.com` |
 | `store.address`, `store.hours`, `outreach.service_area` | 200자 이하 |

@@ -3,9 +3,10 @@ import Link from "next/link";
 
 import { ContactButton } from "@/components/dialogs";
 import { Logo } from "@/components/site-header";
-import { SHOP } from "@/lib/demo";
+import type { Shop } from "@/lib/demo";
 
-export function SiteFooter() {
+export function SiteFooter({ shop }: { shop: Shop }) {
+  const lines = [shop.address, ...shop.hours, shop.phone].filter(Boolean); // 비어 있는 값은 숨긴다
   return (
     <>
       <footer className="footer">
@@ -13,12 +14,8 @@ export function SiteFooter() {
           <div className="footer-grid">
             <div>
               <Logo />
-              <p className="sub">{SHOP.location} · 식물가게</p>
-              <p className="sub">
-                {SHOP.address}
-                {SHOP.hours.map((h) => <span key={h}><br />{h}</span>)}
-                <br />{SHOP.phone}
-              </p>
+              <p className="sub">{shop.location} · 식물가게</p>
+              {lines.length ? <p className="sub">{lines.map((l, i) => <span key={l}>{i ? <br /> : null}{l}</span>)}</p> : null}
             </div>
             <div className="foot-links">
               <Link href="/plants/">식물</Link>
@@ -30,7 +27,7 @@ export function SiteFooter() {
           </div>
           <div className="foot-bottom">
             <span>© DOHWA</span>
-            <a href={`https://www.instagram.com/${SHOP.instagram}/`} target="_blank" rel="noopener">@{SHOP.instagram}</a>
+            {shop.instagram ? <a href={`https://www.instagram.com/${shop.instagram}/`} target="_blank" rel="noopener">@{shop.instagram}</a> : null}
           </div>
         </div>
       </footer>

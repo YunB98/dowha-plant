@@ -4,10 +4,10 @@
 import Link from "next/link";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-import { PLANTS, SHOP } from "@/lib/demo";
+import { PLANTS, type Shop } from "@/lib/demo";
 
 type Kind = "contact" | "search" | null;
-const DialogContext = createContext<{ open: (k: Exclude<Kind, null>) => void }>({ open: () => {} });
+const DialogContext = createContext<{ open: (k: Exclude<Kind, null>) => void; shop: Shop | null }>({ open: () => {}, shop: null });
 export const useDialogs = () => useContext(DialogContext);
 
 const ICON = {
@@ -18,15 +18,15 @@ const ICON = {
 
 type Channel = { key: string; title: string; sub: string; href: string | null; icon: ReactNode; internal?: boolean };
 
-function channels(includeStore: boolean): Channel[] {
+function channels(shop: Shop, includeStore: boolean): Channel[] {
   // eslint-disable-next-line @next/next/no-img-element
   const img = (k: string) => <img className="official-channel-icon" src={`/assets/contact-${k}.jpg`} alt="" width={46} height={46} />;
   const list: Channel[] = [
-    { key: "kakao", title: "카카오톡 상담", sub: "카카오톡으로 편하게 문의", href: SHOP.kakaoUrl, icon: img("kakao") },
-    { key: "talk", title: "네이버 톡톡", sub: "네이버에서 1:1 상담", href: SHOP.naverTalkUrl, icon: img("talk") },
-    { key: "store", title: "스마트스토어", sub: "도화의 상품 둘러보기", href: SHOP.smartstoreUrl, icon: ICON.store },
-    { key: "phone", title: "전화 상담", sub: SHOP.phone, href: `tel:${SHOP.phone.replace(/[^\d+]/g, "")}`, icon: ICON.phone },
-    { key: "instagram", title: "인스타그램", sub: "도화의 소식과 DM", href: `https://www.instagram.com/${SHOP.instagram}/`, icon: img("instagram") },
+    { key: "kakao", title: "카카오톡 상담", sub: "카카오톡으로 편하게 문의", href: shop.kakaoUrl, icon: img("kakao") },
+    { key: "talk", title: "네이버 톡톡", sub: "네이버에서 1:1 상담", href: shop.naverTalkUrl, icon: img("talk") },
+    { key: "store", title: "스마트스토어", sub: "도화의 상품 둘러보기", href: shop.smartstoreUrl, icon: ICON.store },
+    { key: "phone", title: "전화 상담", sub: shop.phone, href: shop.phone ? `tel:${shop.phone.replace(/[^\d+]/g, "")}` : null, icon: ICON.phone },
+    { key: "instagram", title: "인스타그램", sub: "도화의 소식과 DM", href: shop.instagram ? `https://www.instagram.com/${shop.instagram}/` : null, icon: img("instagram") },
     { key: "quote", title: "출강·단체 견적 문의", sub: "기관·기업 프로그램 문의", href: "/outreach/", icon: ICON.quote, internal: true },
   ];
   // 상담 창에는 스마트스토어를 넣지 않는다 (프로토타입 contact()와 같다). 링크 모음에만
@@ -48,7 +48,9 @@ export function ChannelRow({ c, onNavigate }: { c: Channel; onNavigate?: () => v
 }
 
 export function ContactLinks({ onNavigate, includeStore = false }: { onNavigate?: () => void; includeStore?: boolean }) {
-  return <div className="contact-links branded-contact">{channels(includeStore).map((c) => <ChannelRow key={c.key} c={c} onNavigate={onNavigate} />)}</div>;
+  const { shop } = useDialogs();
+  if (!shop) return null;
+  return <div className="contact-links branded-contact">{channels(shop, includeStore).map((c) => <ChannelRow key={c.key} c={c} onNavigate={onNavigate} />)}</div>;
 }
 
 function SearchBody({ close }: { close: () => void }) {
@@ -70,7 +72,7 @@ function SearchBody({ close }: { close: () => void }) {
   );
 }
 
-export function DialogProvider({ children }: { children: ReactNode }) {
+export function DialogProvider({ shop, children }: { shop: Shop; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind>(null);
 
@@ -86,7 +88,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   }, [kind]);
 
   return (
-    <DialogContext.Provider value={{ open }}>
+    <DialogContext.Provider value={{ open, shop }}>
       {children}
       <dialog
         id="modal"

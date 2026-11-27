@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-hooks.mjs pre",
     "build": "next build",
+    "postbuild": "node scripts/build-hooks.mjs post",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

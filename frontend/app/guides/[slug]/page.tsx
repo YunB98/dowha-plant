@@ -5,16 +5,17 @@ import { notFound } from "next/navigation";
 
 import { Photo } from "@/components/cards";
 import { ContactButton } from "@/components/dialogs";
-import { DIFFICULTY_LABEL, GUIDES } from "@/lib/demo";
+import { getGuide, getGuides, PLACEHOLDER, staticParams } from "@/lib/content";
+import { DIFFICULTY_LABEL } from "@/lib/demo";
 
 export const dynamicParams = false;
 
-export function generateStaticParams() {
-  return GUIDES.map((g) => ({ slug: g.slug }));
+export async function generateStaticParams() {
+  return staticParams("slug", (await getGuides()).map((g) => g.slug));
 }
 
 type Props = { params: Promise<{ slug: string }> };
-const find = async (params: Props["params"]) => { const { slug } = await params; return GUIDES.find((g) => g.slug === slug); };
+const find = async (params: Props["params"]) => { const { slug } = await params; return slug === PLACEHOLDER ? undefined : getGuide(slug); };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const g = await find(params);

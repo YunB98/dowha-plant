@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { HeroScrollCue } from "@/components/hero-scroll-cue";
 import { Empty, PlantCard, Section } from "@/components/ui";
+import { getPlants } from "@/lib/content";
 import { PURPOSES, weeklyPlants } from "@/lib/demo";
 
-export default function Home() {
-  const list = weeklyPlants();
+export default async function Home() {
+  const list = weeklyPlants(await getPlants());
   return (
     <>
       <section className="hero">

@@ -5,27 +5,30 @@ import { notFound } from "next/navigation";
 
 import { ContactButton } from "@/components/dialogs";
 import { StatusBadge } from "@/components/ui";
-import { PLANTS, SALE_LABEL } from "@/lib/demo";
+import { getGuides, getPlants, PLACEHOLDER, staticParams } from "@/lib/content";
+import { SALE_LABEL } from "@/lib/demo";
 import { won } from "@/lib/format";
 
 export const dynamicParams = false;
 
-export function generateStaticParams() {
-  return PLANTS.map((p) => ({ id: p.id }));
+export async function generateStaticParams() {
+  return staticParams("id", (await getPlants()).map((p) => p.id));
 }
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const p = PLANTS.find((x) => x.id === id);
+  const p = (await getPlants()).find((x) => x.id === id);
   return p ? { title: p.name, description: p.summary } : {};
 }
 
 export default async function PlantDetail({ params }: Props) {
   const { id } = await params;
-  const p = PLANTS.find((x) => x.id === id);
+  const p = id === PLACEHOLDER ? undefined : (await getPlants()).find((x) => x.id === id);
   if (!p) notFound();
+  // 공개된 가이드가 있을 때만 연결 (없는 가이드로 가는 링크를 만들지 않는다)
+  const guide = p.guideSlug && (await getGuides()).some((g) => g.slug === p.guideSlug) ? p.guideSlug : null;
   return (
     <div className="wrap content">
       <div className="crumb"><Link href="/">홈</Link> / <Link href="/plants/">식물</Link> / {p.name}</div>
@@ -44,7 +47,7 @@ export default async function PlantDetail({ params }: Props) {
           </dl>
           <div className="button-row">
             <ContactButton className="btn">{p.saleStatus === "sold" ? "비슷한 식물 추천받기" : "이 식물 상담하기"}</ContactButton>
-            {p.guideSlug ? <Link className="btn outline" href={`/guides/${p.guideSlug}/`}>관리 가이드</Link> : null}
+            {guide ? <Link className="btn outline" href={`/guides/${guide}/`}>관리 가이드</Link> : null}
             {p.blogUrl ? <a className="btn outline" href={p.blogUrl} target="_blank" rel="noopener">블로그에서 전체 읽기</a> : null}
           </div>
           <div className="panel" style={{ marginTop: 30 }}>

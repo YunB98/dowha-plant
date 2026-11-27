@@ -4,15 +4,15 @@ import { Suspense } from "react";
 
 import { CasesBrowser, CasesView } from "@/components/cases-browser";
 import { PageTop } from "@/components/ui";
-import { CASES } from "@/lib/demo";
+import { getCases } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "진행 사례",
   description: "도화와 함께한 학교·어린이집·복지관·기관·기업 원예 수업과 출강 이야기.",
 };
 
-export default function CasesPage() {
-  const cases = [...CASES].sort((a, b) => b.heldOn.localeCompare(a.heldOn) || b.id - a.id);
+export default async function CasesPage() {
+  const cases = [...(await getCases())].sort((a, b) => b.heldOn.localeCompare(a.heldOn) || b.id - a.id);
   return (
     <>
       <PageTop en="OUR WORK" title="진행 사례" sub="도화와 함께한 원예 수업과 출강 이야기." />

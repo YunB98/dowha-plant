@@ -5,9 +5,10 @@ import { useState } from "react";
 
 import { Photo } from "@/components/cards";
 import { Empty } from "@/components/ui";
-import { DIFFICULTY_LABEL, type Guide } from "@/lib/demo";
+import type { GuideListItem } from "@/lib/content";
+import { DIFFICULTY_LABEL } from "@/lib/demo";
 
-export function GuideList({ guides }: { guides: Guide[] }) {
+export function GuideList({ guides }: { guides: GuideListItem[] }) {
   const [q, setQ] = useState("");
   const list = guides.filter((g) => g.name.includes(q.trim()));
   return (
@@ -21,7 +22,7 @@ export function GuideList({ guides }: { guides: Guide[] }) {
             <Photo src={g.image} alt={g.name} />
             <div>
               <h3>{g.name}</h3>
-              <p className="sub">난이도 {DIFFICULTY_LABEL[g.difficulty]} · {g.light}</p>
+              <p className="sub">난이도 {DIFFICULTY_LABEL[g.difficulty]}{g.note ? ` · ${g.note}` : ""}</p>
             </div>
             <span className="spacer">↗</span>
           </Link>

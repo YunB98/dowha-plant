@@ -9,7 +9,19 @@ npm ci
 npm run dev        # http://localhost:3000
 npm run build      # out/ 에 정적 사이트 (index.html, 404.html, error.html, _next/…)
 npm run typecheck
+CONTENT_SOURCE=api npm run build   # 운영 API 내용으로 빌드 (CI와 같다)
 ```
+
+## 내용은 어디서 오나 (`lib/content.ts`)
+| `CONTENT_SOURCE` | 내용 | 쓰는 곳 |
+|---|---|---|
+| `api` | 빌드할 때 운영 공개 API(`/api/v1/store`, `/workshops`, `/cases`, `/guides`)에서 받는다. 실패하면 빌드 실패 | CI (deploy.yml) |
+| 없음 | `lib/demo.ts` 예시 데이터 | 로컬 개발 |
+
+- 식물(블로그 글)은 아직 API가 없어 두 경우 모두 예시 데이터다 (ADR 0027 S-01을 만들면 바꾼다)
+- 손님 브라우저는 API를 부르지 않는다 (견적 문의 접수만 예외). 관리 화면에서 내용을 바꾸면 **다시 빌드·배포해야** 사이트에 보인다
+  (자동 재빌드는 ADR 0015, 아직 연결 전)
+- 목록이 비어도 빌드되도록 상세 페이지에 자리표시 주소(`_`)를 하나 만들고, 빌드 후 지운다 (`scripts/build-hooks.mjs`)
 
 ## 구조
 | 경로 | 내용 |
