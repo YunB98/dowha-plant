@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Serif_KR } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AttributionCapture } from "@/components/attribution";
 import { DialogProvider } from "@/components/dialogs";
 import { Motion } from "@/components/motion";
 import { SiteFooter } from "@/components/site-footer";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SiteFooter />
         </DialogProvider>
         <Motion />
+        <AttributionCapture />
         {IS_PREVIEW ? (
           <div className="preview-bar" role="note">사이트를 준비하고 있어요 · 사진과 내용은 예시예요</div>
         ) : null}

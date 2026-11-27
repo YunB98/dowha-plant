@@ -13,19 +13,24 @@ export const useDialogs = () => useContext(DialogContext);
 const ICON = {
   phone: <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19 19 0 0 1-8.3-3 19 19 0 0 1-6-6 19 19 0 0 1-3.1-8.3A2 2 0 0 1 4.4 2h3a2 2 0 0 1 2 1.7l.7 3.4a2 2 0 0 1-.6 2l-1.3 1.3a15 15 0 0 0 5.4 5.4l1.3-1.3a2 2 0 0 1 2-.6l3.4.7a2 2 0 0 1 1.7 2.3Z" /></svg>,
   quote: <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path d="M14 3v6h5M9 13h7m-7 4h7" /></svg>,
+  store: <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.273 12.845 7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845Z" /></svg>,
 };
 
 type Channel = { key: string; title: string; sub: string; href: string | null; icon: ReactNode; internal?: boolean };
 
-function channels(): Channel[] {
+function channels(includeStore: boolean): Channel[] {
+  // eslint-disable-next-line @next/next/no-img-element
   const img = (k: string) => <img className="official-channel-icon" src={`/assets/contact-${k}.jpg`} alt="" width={46} height={46} />;
-  return [
+  const list: Channel[] = [
     { key: "kakao", title: "카카오톡 상담", sub: "카카오톡으로 편하게 문의", href: SHOP.kakaoUrl, icon: img("kakao") },
     { key: "talk", title: "네이버 톡톡", sub: "네이버에서 1:1 상담", href: SHOP.naverTalkUrl, icon: img("talk") },
+    { key: "store", title: "스마트스토어", sub: "도화의 상품 둘러보기", href: SHOP.smartstoreUrl, icon: ICON.store },
     { key: "phone", title: "전화 상담", sub: SHOP.phone, href: `tel:${SHOP.phone.replace(/[^\d+]/g, "")}`, icon: ICON.phone },
     { key: "instagram", title: "인스타그램", sub: "도화의 소식과 DM", href: `https://www.instagram.com/${SHOP.instagram}/`, icon: img("instagram") },
     { key: "quote", title: "출강·단체 견적 문의", sub: "기관·기업 프로그램 문의", href: "/outreach/", icon: ICON.quote, internal: true },
   ];
+  // 상담 창에는 스마트스토어를 넣지 않는다 (프로토타입 contact()와 같다). 링크 모음에만
+  return includeStore ? list : list.filter((c) => c.key !== "store");
 }
 
 export function ChannelRow({ c, onNavigate }: { c: Channel; onNavigate?: () => void }) {
@@ -42,8 +47,8 @@ export function ChannelRow({ c, onNavigate }: { c: Channel; onNavigate?: () => v
   return <a className="channel-row" href={c.href} {...(external ? { target: "_blank", rel: "noopener" } : {})}>{inner}</a>;
 }
 
-export function ContactLinks({ onNavigate }: { onNavigate?: () => void }) {
-  return <div className="contact-links branded-contact">{channels().map((c) => <ChannelRow key={c.key} c={c} onNavigate={onNavigate} />)}</div>;
+export function ContactLinks({ onNavigate, includeStore = false }: { onNavigate?: () => void; includeStore?: boolean }) {
+  return <div className="contact-links branded-contact">{channels(includeStore).map((c) => <ChannelRow key={c.key} c={c} onNavigate={onNavigate} />)}</div>;
 }
 
 function SearchBody({ close }: { close: () => void }) {

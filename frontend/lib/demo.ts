@@ -29,6 +29,7 @@ export type Shop = {
   naverTalkUrl: string | null;
   instagram: string;
   smartstoreUrl: string | null;
+  brochureUrl: string | null;
 };
 
 export const PURPOSES = [
@@ -56,6 +57,7 @@ export const SHOP: Shop = {
   naverTalkUrl: "https://naver.me/Gpl6QyeP",
   instagram: "dowha_plantshop",
   smartstoreUrl: null,
+  brochureUrl: null,
 };
 
 export const PLANTS: Plant[] = [
@@ -65,6 +67,84 @@ export const PLANTS: Plant[] = [
   { id: "season-flower", name: "계절 꽃", image: "/assets/flowers.webp", summary: "계절에 어울리는 꽃을 소개합니다. 실제 구성은 상담을 통해 안내해요.", saleStatus: "sold", price: null, size: "", purposes: ["꽃이 피는 식물", "집들이 선물"], guideSlug: null, publishedAt: "2026-11-22", blogUrl: null },
   { id: "green-gift", name: "식물 선물 구성", image: "/assets/gift.webp", summary: "소중한 마음을 전하기 위한 선물 구성입니다.", saleStatus: "available", price: null, size: "", purposes: ["단체 답례품", "개업·승진 선물"], guideSlug: null, publishedAt: "2026-11-21", blogUrl: null },
   { id: "green-selection", name: "실내 식물 셀렉션", image: "/assets/plants.webp", summary: "공간의 밝기와 크기에 맞춰 식물을 함께 골라요.", saleStatus: "available", price: null, size: "", purposes: ["키우기 쉬운 식물", "거실·매장 인테리어"], guideSlug: null, publishedAt: "2026-11-20", blogUrl: null },
+];
+
+// ---------- 클래스 (API /api/v1/workshops) ----------
+
+export type Workshop = {
+  id: number;
+  name: string;
+  description: string;
+  image: string | null;
+  pricePerPerson: number | null; // null: 협의 (단체 프로그램)
+  minPeople: number;
+  maxPeople: number;
+  durationMin: number;
+  durationMax: number;
+  isSeasonal: boolean;
+  supportsOutreach: boolean;
+  status: "open" | "closed";
+};
+
+export const WORKSHOP_STATUS_LABEL = { open: "모집 중", closed: "지금은 모집 안 함" } as const;
+
+export const WORKSHOPS: Workshop[] = [
+  { id: 1, name: "화분 꾸미기 & 가드닝", description: "식물과 화분을 고르고 직접 분갈이하는 원데이 클래스.", image: "/assets/schefflera-2.webp", pricePerPerson: 30000, minPeople: 1, maxPeople: 4, durationMin: 60, durationMax: 90, isSeasonal: false, supportsOutreach: true, status: "open" },
+  { id: 2, name: "수형 잡기", description: "가지를 다듬어 식물의 모양을 잡는 방법을 배워요.", image: "/assets/schefflera.webp", pricePerPerson: 35000, minPeople: 1, maxPeople: 4, durationMin: 60, durationMax: 90, isSeasonal: false, supportsOutreach: true, status: "open" },
+  { id: 3, name: "크리스마스 생화 리스", description: "생화와 초록으로 크리스마스 리스를 만들어요.", image: "/assets/flowers.webp", pricePerPerson: 40000, minPeople: 1, maxPeople: 4, durationMin: 90, durationMax: 120, isSeasonal: true, supportsOutreach: true, status: "open" },
+];
+
+export const range = (a: number, b: number, unit: string) => (a === b ? `${a}${unit}` : `${a}~${b}${unit}`);
+
+// ---------- 진행 사례 (API /api/v1/cases) ----------
+
+export type OrganizationType = "school" | "kindergarten" | "welfare" | "public" | "company" | "other";
+
+export const ORGANIZATION_LABEL: Record<OrganizationType, string> = {
+  school: "학교",
+  kindergarten: "어린이집·유치원",
+  welfare: "복지관",
+  public: "공공기관",
+  company: "기업",
+  other: "기타",
+};
+
+export type Case = {
+  id: number;
+  title: string;
+  organizationType: OrganizationType;
+  organizationDisplayName: string;
+  heldOn: string; // YYYY-MM-DD
+  participantCount: number | null;
+  summary: string;
+  image: string | null;
+};
+
+export const CASES: Case[] = [
+  { id: 1, title: "학교 단체 원예 수업", organizationType: "school", organizationDisplayName: "전주 ○○초등학교", heldOn: "2026-11-18", participantCount: 20, summary: "함께 식물을 심고 돌보는 시간을 가진 수업 예시입니다.", image: "/assets/plants.webp" },
+  { id: 2, title: "복지관 반려식물 프로그램", organizationType: "welfare", organizationDisplayName: "완주 ○○복지관", heldOn: "2026-11-12", participantCount: 12, summary: "식물을 매개로 함께 이야기를 나누는 프로그램 예시입니다.", image: "/assets/studio.webp" },
+];
+
+// ---------- 식물 관리 가이드 (API /api/v1/guides) ----------
+
+export type Guide = {
+  slug: string;
+  name: string;
+  image: string | null;
+  difficulty: "easy" | "normal" | "hard";
+  light: string;
+  watering: string;
+  temperature: string;
+  humidity: string;
+  seasonalCare: string;
+  troubleshooting: string;
+};
+
+export const DIFFICULTY_LABEL = { easy: "쉬움", normal: "보통", hard: "어려움" } as const;
+
+export const GUIDES: Guide[] = [
+  { slug: "schefflera", name: "홍콩야자", image: "/assets/schefflera.webp", difficulty: "easy", light: "밝은 간접광", watering: "겉흙이 마르면 충분히 주세요.", temperature: "18~26℃", humidity: "통풍이 되는 실내", seasonalCare: "겨울에는 물 주는 횟수를 줄이세요.", troubleshooting: "잎이 노랗게 변하면 과습과 빛을 확인하세요." },
+  { slug: "monstera", name: "몬스테라", image: "/assets/monstera.webp", difficulty: "easy", light: "밝은 간접광", watering: "겉흙이 마르면 화분 아래로 물이 흐를 만큼 주세요.", temperature: "18~28℃", humidity: "보통~높음", seasonalCare: "추운 창가와 냉난방기 바람을 피하세요.", troubleshooting: "잎 끝이 마르면 물과 습도 상태를 확인하세요." },
 ];
 
 /** 홈 "이번 주 들어온 식물": 최신순, 판매 중 먼저, 4개 (프로토타입 home()과 같은 규칙) */
