@@ -66,7 +66,8 @@ def test_create(client: TestClient, db: Session, sent: list[str]) -> None:
 
 @pytest.mark.parametrize(
     ("raw", "expected"),
-    [("01012345678", "010-1234-5678"), ("02-123-4567", "02-123-4567"), ("063 271 1234", "063-271-1234")],
+    [("01012345678", "010-1234-5678"), ("02-123-4567", "02-123-4567"), ("063 271 1234", "063-271-1234"),
+     ("0507-1358-4480", "0507-1358-4480"), ("050713584480", "0507-1358-4480")],
 )
 def test_phone_normalized(client: TestClient, db: Session, sent: list[str], raw: str, expected: str) -> None:
     res = client.post(URL, json=payload(phone=raw))

@@ -34,8 +34,11 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def normalize_phone(value: str) -> str:
-    """하이픈·공백을 허용하고 010-1234-5678 / 02-123-4567 / 063-123-4567 형식으로 맞춘다."""
+    """하이픈·공백을 허용하고 010-1234-5678 / 02-123-4567 / 063-123-4567 형식으로 맞춘다.
+    네이버 플레이스 안심번호(0507 등 050X, 12자리)는 0507-1234-5678로 맞춘다."""
     digits = re.sub(r"[\s\-().]", "", value)
+    if re.fullmatch(r"050\d{9}", digits):
+        return f"{digits[:4]}-{digits[4:8]}-{digits[8:]}"
     if not re.fullmatch(r"0\d{8,10}", digits):
         raise ValueError("연락처 형식이 올바르지 않아요. 예: 010-1234-5678")
     if digits.startswith("02"):
