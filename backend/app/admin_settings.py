@@ -29,6 +29,7 @@ log = logging.getLogger("dowha.admin")
 # 링크 키별로 허용하는 주소 (호스트가 정확히 같거나 그 하위 도메인)
 LINK_HOSTS = {
     "contact.kakao_url": ("pf.kakao.com", "open.kakao.com"),
+    "contact.naver_talk_url": ("naver.me", "talk.naver.com"),
     "links.smartstore_url": ("smartstore.naver.com",),
     "links.naver_place_url": ("naver.me", "map.naver.com", "m.place.naver.com", "place.naver.com"),
 }
@@ -51,6 +52,7 @@ class SettingsUpdate(BaseModel):
 
     contact_phone: str | None = Field(None, alias="contact.phone", max_length=20)
     contact_kakao_url: str | None = Field(None, alias="contact.kakao_url", max_length=300)
+    contact_naver_talk_url: str | None = Field(None, alias="contact.naver_talk_url", max_length=300)
     contact_instagram: str | None = Field(None, alias="contact.instagram", max_length=31)
     links_smartstore_url: str | None = Field(None, alias="links.smartstore_url", max_length=300)
     links_naver_place_url: str | None = Field(None, alias="links.naver_place_url", max_length=300)
@@ -73,7 +75,7 @@ class SettingsUpdate(BaseModel):
             raise ValueError("인스타그램 계정 이름만 넣어주세요. 예: dowha_plantshop")
         return v
 
-    @field_validator("contact_kakao_url", "links_smartstore_url", "links_naver_place_url")
+    @field_validator("contact_kakao_url", "contact_naver_talk_url", "links_smartstore_url", "links_naver_place_url")
     @classmethod
     def _link(cls, v: str | None, info: Any) -> str | None:
         if not v:

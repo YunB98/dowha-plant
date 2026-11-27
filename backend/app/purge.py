@@ -87,6 +87,11 @@ class OverdueCollector(Collector):
     def __init__(self, session_factory: Callable[[], Session]) -> None:
         self.session_factory = session_factory
 
+    def describe(self) -> Iterable[GaugeMetricFamily]:
+        # 등록할 때 이름만 알려 준다. 없으면 prometheus_client가 등록 순간 collect()를 불러
+        # API가 시작하면서 DB를 조회하고, DB가 늦으면 시작이 멈춘다
+        yield GaugeMetricFamily("dowha_inquiries_pii_overdue", "")
+
     def collect(self) -> Iterable[GaugeMetricFamily]:
         try:
             with self.session_factory() as db:

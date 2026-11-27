@@ -66,6 +66,15 @@ groups:
         annotations:
           summary: "보관 기간이 지난 문의 {{ $value }}건의 개인정보가 남아 있어요. journalctl -u dowha-pii-purge 확인"
 
+      # 블로그 새 글이 사이트로 들어오지 않는다 (RSS 주소 변경, 네이버 차단, 타이머 정지 등)
+      - alert: BlogImportStale
+        expr: dowha_blog_import_age_seconds > 6 * 3600
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "블로그 글을 {{ $value | humanizeDuration }} 동안 가져오지 못했어요. journalctl -u dowha-blog-import 확인"
+
       # 문의 알림이 실패하면 사장님이 문의를 놓칠 수 있다
       - alert: InquiryNotificationFailed
         expr: increase(dowha_notifications_failed_total[30m]) > 0

@@ -53,6 +53,7 @@ class Storage(Protocol):
     def read_start(self, bucket: str, key: str, length: int) -> bytes: ...
     def copy(self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str,
              content_type: str, cache_control: str) -> None: ...
+    def put(self, bucket: str, key: str, body: bytes, content_type: str, cache_control: str) -> None: ...
     def delete(self, bucket: str, key: str) -> None: ...
     def invalidate(self, paths: list[str]) -> str: ...
 
@@ -131,6 +132,11 @@ class S3Storage:
             "Content-Type": content_type,
             "Cache-Control": cache_control,
         })
+        self._check(res, 200)
+
+    def put(self, bucket: str, key: str, body: bytes, content_type: str, cache_control: str) -> None:
+        """서버가 직접 올린다 (블로그 썸네일 사본, ADR 0027). 브라우저 업로드는 presign_post."""
+        res = self._send("PUT", self._url(bucket, key), headers={"Content-Type": content_type, "Cache-Control": cache_control}, body=body)
         self._check(res, 200)
 
     def delete(self, bucket: str, key: str) -> None:

@@ -303,3 +303,39 @@ class AdminUser(TimestampMixin, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (one_of("role", ROLES),)
+
+
+class BlogPost(TimestampMixin, Base):
+    """네이버 블로그 글 (RSS로 가져온다, ADR 0027). 전체 글은 블로그에 있고 여기에는 요약만.
+
+    가져온 값(guid, title, excerpt, tags, published_at, 썸네일)은 처음 한 번만 저장한다.
+    사장님이 고치는 값(display_name, kind, purposes, 판매 정보, 숨김)은 다시 가져와도 덮어쓰지 않는다.
+    """
+
+    __tablename__ = "blog_posts"
+    KINDS = ("plant", "class", "outreach", "gift", "other")
+    SALE_STATUSES = ("available", "reserved", "sold")
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    guid: Mapped[str] = mapped_column(String(300), unique=True)  # 원문 주소 (추적용 쿼리 제거)
+    title: Mapped[str] = mapped_column(String(300))
+    display_name: Mapped[str | None] = mapped_column(String(100))  # 사장님이 정한 짧은 이름
+    excerpt: Mapped[str] = mapped_column(Text, server_default="")
+    kind: Mapped[str] = mapped_column(String(20), server_default="other")
+    tags: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))  # 블로그 원본 태그
+    purposes: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))  # 정리된 목적 필터
+    thumbnail_s3_key: Mapped[str | None] = mapped_column(String(300))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    is_hidden: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    sale_status: Mapped[str | None] = mapped_column(String(20))
+    price: Mapped[int | None] = mapped_column(Integer)
+    size: Mapped[str] = mapped_column(String(50), server_default="")  # 자유 입력 ("약 55cm", ADR 0028)
+    plant_guide_id: Mapped[int | None] = mapped_column(ForeignKey("plant_guides.id", ondelete="SET NULL"))
+
+    __table_args__ = (
+        one_of("kind", KINDS),
+        one_of("sale_status", SALE_STATUSES),
+        CheckConstraint("price IS NULL OR price >= 0", name="price_non_negative"),
+        # 홈·목록: 공개된 식물 글을 최신순으로
+        Index("ix_blog_posts_kind_published_at", "kind", text("published_at DESC")),
+    )

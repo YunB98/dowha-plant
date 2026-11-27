@@ -48,6 +48,10 @@ class FakeStorage:
         src = self.objects[(src_bucket, src_key)]
         self.objects[(dst_bucket, dst_key)] = Obj(src.body, content_type, cache_control)
 
+    def put(self, bucket: str, key: str, body: bytes, content_type: str, cache_control: str) -> None:
+        self._maybe_fail("put")
+        self.objects[(bucket, key)] = Obj(body, content_type, cache_control)
+
     def delete(self, bucket: str, key: str) -> None:
         self._maybe_fail("delete")
         self.objects.pop((bucket, key), None)

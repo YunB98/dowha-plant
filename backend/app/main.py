@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import admin_content, admin_inquiries, admin_qr, admin_settings, admin_summary, admin_uploads, auth, errors, inquiries, public, purge, qr
+from app import admin_blog, admin_content, blog_import, admin_inquiries, admin_qr, admin_settings, admin_summary, admin_uploads, auth, errors, inquiries, plants, public, purge, qr
 from app.config import get_settings
 from app.db import SessionLocal, get_db
 
@@ -32,6 +32,7 @@ app = FastAPI(
 )
 errors.register(app)
 app.include_router(public.router)
+app.include_router(plants.router)
 app.include_router(inquiries.router)
 app.include_router(qr.router)
 app.include_router(auth.router)
@@ -41,9 +42,11 @@ app.include_router(admin_qr.router)
 app.include_router(admin_settings.router)
 app.include_router(admin_uploads.router)
 app.include_router(admin_content.router)
+app.include_router(admin_blog.router)
 
 # 보관 기간이 지난 개인정보가 남아 있는지 (app.purge). 수집할 때마다 DB에서 센다
 REGISTRY.register(purge.OverdueCollector(SessionLocal))
+REGISTRY.register(blog_import.ImportAgeCollector(SessionLocal))  # 블로그 가져오기가 멈췄는지
 
 # Prometheus 수집 경로. Nginx는 /api/, /q/, /umami/ 만 넘기므로 밖에서는 닿지 않는다.
 app.mount("/metrics", make_asgi_app())

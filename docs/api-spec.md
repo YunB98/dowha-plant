@@ -64,7 +64,7 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 
 ```json
 {
-  "contact": { "phone": "...", "kakao_url": "...", "instagram": "dowha_plantshop" },
+  "contact": { "phone": "...", "kakao_url": "...", "naver_talk_url": "...", "instagram": "dowha_plantshop" },
   "links": { "smartstore_url": "...", "naver_place_url": "..." },
   "store": { "address": "...", "hours": "..." },
   "outreach": { "service_area": "전주, 완주, 익산", "brochure_url": "https://dowha-plant.shop/files/brochure.pdf" }
@@ -130,6 +130,22 @@ FastAPI가 OpenAPI 문서(`/api/docs`)를 자동으로 만든다. 이 문서는 
 ```json
 [{ "id": 3, "title": "올리브나무 개업화분", "description": "...", "store_url": "https://smartstore.naver.com/...", "images": [...] }]
 ```
+
+### 식물 (블로그 식물 소개 글, ADR 0027)
+
+#### `GET /api/v1/plants`
+식물로 분류되고 숨기지 않은 블로그 글, 최신순. 서버가 매시간 블로그 RSS에서 가져온다.
+```json
+[{ "id": 46, "name": "홍콩야자", "excerpt": "오늘은 동글동글한 잎 모양으로…", "thumbnail_url": "https://dowha-plant.shop/images/blog/224….png",
+   "purposes": ["키우기 쉬운 식물"], "sale_status": null, "price": null, "size": "",
+   "published_at": "2026-10-08T07:28:57Z", "blog_url": "https://blog.naver.com/dowha_plantshop/224…", "guide_slug": null }]
+```
+- `name`: 사장님이 정한 짧은 이름, 없으면 블로그 제목에서 만든 이름 (따옴표 안 이름 → `|` 앞 → 끝 괄호 제거)
+- `sale_status`: `available`·`reserved`·`sold`·`null`(소개 글), `price`가 null이면 "상담 후 안내"
+- `guide_slug`: 연결한 관리 가이드가 **공개된 경우만**
+
+#### `GET /api/v1/plants/{id}`
+같은 형태. 숨긴 글이나 식물이 아닌 글은 404.
 
 ### 식물 가이드
 
@@ -356,6 +372,17 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 - 비공개(`draft`) 가이드에도 연결할 수 있다. 공개 전에 카드를 먼저 인쇄할 수 있게
 - 이미지: 오류 정정 M, 여백 4칸, `size`는 칸 하나의 픽셀 수(1~40, 기본 10 → 약 370px). 테스트에서 실제로 디코딩해 주소를 확인한다
 
+### 블로그 글 (A-05, ADR 0027)
+
+| 요청 | 설명 |
+|---|---|
+| `GET /admin/blog-posts?kind=` | 가져온 글 전체 (숨긴 글·식물이 아닌 글 포함), 최신순 |
+| `PATCH /admin/blog-posts/{id}` | `display_name`, `kind`, `purposes`(필터 6개 중에서), `sale_status`, `price`, `size`, `plant_guide_id`, `is_hidden`. 보낸 항목만 |
+
+- 자동으로 들어온 글은 아무것도 하지 않아도 진열된다. 판매 정보는 원할 때만
+- `display_name`을 null로 보내면 블로그 제목에서 만든 이름으로 돌아간다. 판매 정보는 null로 지운다
+- 다시 가져와도 이 값들은 덮어쓰지 않는다
+
 ### 설정
 
 | 요청 | 설명 |
@@ -375,6 +402,7 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `contact.phone` | 문의 접수와 같은 형식으로 맞춘다 (`01012345678` → `010-1234-5678`) |
 | `contact.instagram` | 계정 이름만 (`@`는 떼어 낸다) |
 | `contact.kakao_url` | `https://pf.kakao.com`, `open.kakao.com` |
+| `contact.naver_talk_url` | `https://naver.me`, `talk.naver.com` (ADR 0027) |
 | `links.smartstore_url` | `https://smartstore.naver.com` (하위 도메인 포함) |
 | `links.naver_place_url` | `https://naver.me`, `map.naver.com`, `place.naver.com` |
 | `store.address`, `store.hours`, `outreach.service_area` | 200자 이하 |
@@ -401,6 +429,8 @@ QR 코드는 삭제 API가 없다. 이미 인쇄된 카드가 있기 때문에 �
 | `dowha_inquiries_created_total{type, source}` | 문의 접수 수 |
 | `dowha_qr_scans_total{result}` | QR 스캔 수 (`guide`, `fallback`, `unknown`) |
 | `dowha_notifications_failed_total{channel}` | 알림 실패 수 (알림 대상) |
+| `dowha_blog_import_age_seconds` | 블로그 RSS를 마지막으로 가져온 뒤 지난 초 (6시간 넘으면 경보 `BlogImportStale`) |
+| `dowha_blog_posts_imported_total`, `dowha_blog_thumbnail_failed_total` | 가져온 글 수, 대표 사진 사본 실패 수 |
 | `dowha_inquiries_pii_overdue` | 보관 기간 + 2일이 지났는데 개인정보가 남은 문의 수. 0이어야 한다 (경보 `PiiPurgeOverdue`) |
 | `dowha_admin_logins_total{result}` | 관리자 로그인 시도 (경보 `AdminLoginFailures`) |
 | `dowha_uploads_rejected_total{reason}`, `dowha_storage_errors_total{operation}` | 업로드 거부, S3·CloudFront 실패 |

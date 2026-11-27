@@ -75,7 +75,9 @@ def test_store_returns_public_settings_only(client: TestClient, db: Session) -> 
     db.flush()
 
     body = client.get("/api/v1/store").json()
-    assert body["contact"] == {"phone": "010-1234-5678", "kakao_url": None, "instagram": "dowha_plantshop"}
+    assert body["contact"] == {
+        "phone": "010-1234-5678", "kakao_url": None, "naver_talk_url": None, "instagram": "dowha_plantshop"
+    }
     assert body["outreach"] == {"service_area": "전주, 완주, 익산", "brochure_url": f"{BASE}/files/brochure.pdf"}
     assert body["store"] == {"address": None, "hours": None}
     # 내부 설정(privacy.retention_months)은 어디에도 나오지 않는다

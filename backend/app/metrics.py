@@ -17,3 +17,5 @@ QR_SCAN_FAILED = Counter("dowha_qr_scan_record_failed_total", "QR 스캔 기록 
 SITE_REBUILD_REQUESTS = Counter("dowha_site_rebuild_requests_total", "공개 콘텐츠 변경으로 사이트 재빌드를 요청한 수")
 UPLOADS_REJECTED = Counter("dowha_uploads_rejected_total", "올라온 파일을 연결하지 않고 거부한 수", ["reason"])
 STORAGE_ERRORS = Counter("dowha_storage_errors_total", "S3·CloudFront 요청 실패 수", ["operation"])
+BLOG_IMPORTED = Counter("dowha_blog_posts_imported_total", "블로그 RSS에서 새로 가져온 글 수")
+BLOG_THUMBNAIL_FAILED = Counter("dowha_blog_thumbnail_failed_total", "블로그 대표 사진 사본 만들기 실패 수 (글은 사진 없이 저장)")

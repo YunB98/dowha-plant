@@ -1,0 +1,10 @@
+[Unit]
+Description=Import new posts from the Naver blog RSS (app.blog_import)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dowha
+# -T: 터미널 없이 실행. 결과는 journalctl -u dowha-blog-import 로 본다
+ExecStart=/usr/bin/docker compose exec -T api python -m app.blog_import
