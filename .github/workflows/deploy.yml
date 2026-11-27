@@ -98,6 +98,32 @@ jobs:
       - name: 셸 스크립트 검사
         run: shellcheck deploy/scripts/*.sh deploy/postgres/init/*.sh
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # 정적 사이트 (ADR 0015, 0028). 여기서 만든 결과물을 deploy가 그대로 올린다 (한 번 빌드한 것을 배포)
+      # SITE_STAGE가 live가 아니면 "준비 중" 띠와 noindex가 붙는다. 출시할 때 live로 바꾼다
+      - name: 프론트엔드 빌드
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          # 배포 확인 단계와 CloudFront 오류 페이지가 기대하는 파일
+          test -f out/index.html
+          test -f out/error.html
+          grep -q '찾으시는 페이지가 없어요' out/404.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: frontend/out
+          retention-days: 7
+          if-no-files-found: error
+
   deploy:
     name: deploy (prod)
     needs: test
@@ -209,13 +235,28 @@ jobs:
           echo "상태: $status"
           [ "$status" = "Success" ]
 
-      # 지금은 오류 페이지(404.html, error.html)만 있다. 5단계부터 Next.js 빌드 결과를 올린다.
-      # files/ 아래(소개서 PDF)는 서버가 관리하므로 건드리지 않는다. 아직 --delete는 쓰지 않는다.
+      - name: 정적 사이트 받기 (test 단계 빌드 결과)
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
+      # Next.js 빌드 결과(out/)를 올린다.
+      # - _next/static은 파일 이름에 해시가 있어 1년 캐시, 나머지(HTML 등)는 5분
+      # - files/ 아래(소개서 PDF)는 서버가 관리하므로 건드리지 않는다
+      # - 이전 빌드의 페이지는 지운다(--delete). 빈 결과물로 사이트를 지우지 않게 먼저 확인한다
+      #   _next/static의 옛 파일은 남긴다 (배포 중에 옛 HTML을 받은 손님이 깨지지 않게)
       - name: 정적 사이트 업로드
         run: |
+          for f in index.html 404.html error.html; do
+            test -s "site/$f" || { echo "빌드 결과에 $f 가 없습니다"; exit 1; }
+          done
           bucket="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/site-bucket --query Parameter.Value --output text)"
           dist="$(aws ssm get-parameter --name /dowha-plant/prod/deploy/cloudfront-distribution-id --query Parameter.Value --output text)"
-          aws s3 sync frontend/public "s3://${bucket}/" --exclude "files/*"             --cache-control "public, max-age=300" --only-show-errors
+          aws s3 sync site/_next/static "s3://${bucket}/_next/static" \
+            --cache-control "public, max-age=31536000, immutable" --only-show-errors
+          aws s3 sync site "s3://${bucket}/" --exclude "_next/static/*" --exclude "files/*" --delete \
+            --cache-control "public, max-age=300" --only-show-errors
           id="$(aws cloudfront create-invalidation --distribution-id "$dist" --paths "/*"             --query Invalidation.Id --output text)"
           echo "캐시 무효화: $id"
           aws cloudfront wait invalidation-completed --distribution-id "$dist" --id "$id"
@@ -236,3 +277,8 @@ jobs:
           code="$(curl -s -o page.html -w '%{http_code}' "$SITE_URL/__deploy-check-missing-page")"
           echo "없는 페이지: $code"
           [ "$code" = "404" ] && grep -q '찾으시는 페이지가 없어요' page.html
+
+          # 홈은 빌드 때 HTML로 만들어져 있어야 한다 (검색엔진이 읽는 내용)
+          code="$(curl -s -o home.html -w '%{http_code}' "$SITE_URL/")"
+          echo "홈: $code"
+          [ "$code" = "200" ] && grep -q '이번 주 들어온 식물' home.html

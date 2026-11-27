@@ -32,3 +32,4 @@
 | [0025](0025-admin-session-cookie.md) | 관리자 로그인은 서명 토큰 쿠키, 계정은 서버 명령으로만 | 채택 |
 | [0026](0026-s3-access-without-boto3.md) | S3·CloudFront 접근은 botocore 서명 + httpx (boto3 미사용) | 채택 |
 | [0027](0027-blog-feed-and-plant-catalog.md) | 블로그 글을 RSS로 가져와 식물 진열장으로 정리 | 채택 |
+| [0028](0028-frontend-from-prototype.md) | 프론트엔드는 사장님 쪽 프로토타입 디자인을 Next.js 정적 빌드로 | 채택 |

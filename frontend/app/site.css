@@ -1,0 +1,18 @@
+/* 이 저장소에서 더한 스타일 (프로토타입 dohwa.css에는 없는 것) */
+
+/* 출시 전 "준비 중" 띠 (SITE_STAGE != live). 헤더 위에 얹지 않고 화면 맨 아래에 고정해 디자인을 가리지 않는다 */
+.preview-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: #20291e; color: #fffdf1; text-align: center;
+  font-size: 12px; letter-spacing: .02em; line-height: 1.5;
+  padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+/* 휴대폰: 하단 상담 바(높이 61px = 여백 8+8, 버튼 44, 테두리 1) 바로 위.
+   첫 화면에서는 상담 바가 숨으므로(hero-at-top) 맨 아래로. 위쪽에 두면 고정 헤더의 로고를 가린다 */
+@media (max-width: 720px) {
+  .preview-bar { bottom: calc(61px + env(safe-area-inset-bottom, 0px)); padding-bottom: 6px; }
+  .hero-at-top .preview-bar { bottom: 0; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* 연결 주소가 아직 없는 상담 채널 */
+.channel-row[aria-disabled="true"] { opacity: .5; cursor: default; }
